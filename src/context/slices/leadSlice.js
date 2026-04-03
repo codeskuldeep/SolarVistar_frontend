@@ -3,17 +3,26 @@ import api from '../../services/api'; // Adjust path if needed
 
 // 1. Fetch Leads
 export const fetchLeads = createAsyncThunk(
-  'leads/fetchLeads',
-  async (_, { rejectWithValue }) => {
+  "leads/fetchLeads",
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get('/leads');
-      return response.data.data.leads;
+      const { page = 1, limit = 10 } = params;
+
+      const response = await api.get("/leads", {
+        params: { page, limit },
+      });
+
+      return {
+        leads: response.data.data.leads,
+        meta: response.data.data.meta,
+      };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch leads');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch leads"
+      );
     }
   }
 );
-
 // 2. Create Lead
 export const createLead = createAsyncThunk(
   'leads/createLead',
@@ -55,6 +64,12 @@ export const addFollowUp = createAsyncThunk(
 
 const initialState = {
   leads: [],
+   meta: {
+    totalItems: 0,
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalPages: 1,
+  },
   isLoading: false,
   error: null,
   successMessage: null,
@@ -86,7 +101,8 @@ const leadSlice = createSlice({
       })
       .addCase(fetchLeads.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.leads = action.payload;
+        state.leads = action.payload.leads;
+        state.meta = action.payload.meta;
         state.hasFetched = true;
 
       })

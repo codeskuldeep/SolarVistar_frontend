@@ -14,14 +14,14 @@ import {
   WarningCircleIcon,
   CheckCircleIcon,
 } from "@phosphor-icons/react";
+import { TableSkeleton } from "../../components/ui/Skeletons";
 
 const Users = () => {
   const dispatch = useDispatch();
 
   // Pulling exact state from your updated userSlice
-  const { users, isLoading, error, successMessage, hasFetched } = useSelector(
-    (state) => state.users,
-  );
+  const { users, isLoading, error, successMessage, hasFetched, meta } =
+    useSelector((state) => state.users);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,9 +37,18 @@ const Users = () => {
 
     // Only fetch if Redux says we haven't asked the server yet
     if (!hasFetched && !isLoading) {
-      dispatch(fetchUsers());
+      dispatch(fetchUsers({limit: meta.itemsPerPage }));
     }
-  }, [dispatch, isLoading]);
+  }, [dispatch, isLoading , hasFetched, meta.itemsPerPage]);
+
+  const handlePageChange = (newPage) => {
+    // Only fetch if the page is actually valid
+    if (newPage >= 1 && newPage <= meta.totalPages) {
+      // Dispatching directly here bypasses the `hasFetched` block!
+      dispatch(fetchUsers({ page: newPage, limit: meta.itemsPerPage }));
+    }
+  };
+
   // 2. Auto-clear alerts after 3 seconds
   useEffect(() => {
     if (error || successMessage) {
@@ -167,15 +176,8 @@ const Users = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-dark-surface divide-y divide-gray-200 dark:divide-dark-border">
-              {isLoading && usersList.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
-                  >
-                    Loading team members...
-                  </td>
-                </tr>
+              {isLoading ? (
+                <TableSkeleton columns={4} />
               ) : usersList.length === 0 ? (
                 <tr>
                   <td
@@ -349,6 +351,48 @@ const Users = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {meta?.totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Showing{" "}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {(meta.currentPage - 1) * meta.itemsPerPage + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {meta.totalItems}
+            </span>{" "}
+            leads
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(meta.currentPage - 1)}
+              disabled={meta.currentPage === 1 || isLoading}
+              className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+
+            <span className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Page {meta.currentPage} of {meta.totalPages}
+            </span>
+
+            <button
+              onClick={() => handlePageChange(meta.currentPage + 1)}
+              disabled={meta.currentPage === meta.totalPages || isLoading}
+              className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         </div>
       )}

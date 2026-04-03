@@ -24,6 +24,7 @@ import {
 import { fetchLeads } from "../../context/slices/leadSlice";
 import QuotationPDFTemplate from "./QuotationPDFTemplate";
 import { useSearchParams } from "react-router-dom"; // 👈 Import this!
+import { TableSkeleton } from "../../components/ui/Skeletons";
 export default function QuotationManager() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -120,9 +121,10 @@ export default function QuotationManager() {
    ========================================= */
 const QuotationList = ({ onView }) => {
   const dispatch = useDispatch();
-  const { quotationsList, status, error } = useSelector(
+  const { quotationsList, status, error, meta } = useSelector(
     (state) => state.quotations,
   );
+
   const [quoteSearch, setQuoteSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -151,22 +153,21 @@ const QuotationList = ({ onView }) => {
 
       return matchesName || matchesPhone;
     });
-  }, [quotationsList, debouncedSearch]); // Only re-run when these two change
+  }, [quotationsList, debouncedSearch]); 
 
   useEffect(() => {
-    if (quotationsList.length === 0) {
-      // Only fetch if we don't already have data
-      dispatch(fetchQuotations());
+    if (status === "idle") {
+      dispatch(fetchQuotations({ page: 1, limit: meta.itemsPerPage }));
     }
-  }, [dispatch, quotationsList.length]);
+  }, [dispatch, status]);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-500 animate-spin" />
-      </div>
-    );
-  }
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= meta.totalPages) {
+      dispatch(fetchQuotations({ page: newPage, limit: meta.itemsPerPage }));
+    }
+  };
+
+
 
   if (status === "failed") {
     return (
@@ -206,7 +207,9 @@ const QuotationList = ({ onView }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
-            {quotationsList.length === 0 ? (
+            {status === "loading" ? (
+              <TableSkeleton columns={6} />
+            ) : quotationsList.length === 0 ? (
               <tr>
                 <td
                   colSpan="6"
@@ -270,6 +273,50 @@ const QuotationList = ({ onView }) => {
             )}
           </tbody>
         </table>
+        {meta?.totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Showing{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {(meta.currentPage - 1) * meta.itemsPerPage + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {Math.min(
+                  meta.currentPage * meta.itemsPerPage,
+                  meta.totalItems,
+                )}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {meta.totalItems}
+              </span>{" "}
+              leads
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(meta.currentPage - 1)}
+                disabled={meta.currentPage === 1 || status === "loading"} 
+                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+
+              <span className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Page {meta.currentPage} of {meta.totalPages}
+              </span>
+
+              <button
+                onClick={() => handlePageChange(meta.currentPage + 1)}
+                disabled={meta.currentPage === meta.totalPages || status === "loading"}
+                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -7,7 +7,6 @@ import {
   createLead,
   updateLeadStatus,
   addFollowUp,
-  clearLeadMessages,
 } from "../../context/slices/leadSlice";
 import { fetchUsers } from "../../context/slices/userSlice";
 import { addToast } from "../../context/slices/toastSlice";
@@ -22,6 +21,7 @@ import {
   // 2. 👇 Import an icon for the Quotation button (Receipt or FileText)
   ReceiptIcon,
 } from "@phosphor-icons/react";
+import { MobileCardSkeleton } from "../../components/ui/Skeletons";
 
 /* ─── Status config ─── */
 const STATUS_CONFIG = {
@@ -62,13 +62,11 @@ const labelCls =
 /* ═══════════════════════════════════════════ */
 const Leads = () => {
   const dispatch = useDispatch();
-  // 3. 👇 Initialize the navigate function
   const navigate = useNavigate();
 
-  const { leads, isLoading, hasFetched } = useSelector((state) => state.leads);
+  const { leads, isLoading } = useSelector((state) => state.leads);
   const { users } = useSelector((state) => state.users);
   const { user: currentUser } = useSelector((state) => state.auth);
-
   const [activeModal, setActiveModal] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
   const [createData, setCreateData] = useState({
@@ -90,12 +88,33 @@ const Leads = () => {
     nextFollowUpDate: "",
   });
 
+  // Pull the flags from both slices
+  const { hasFetched: hasFetchedLeads, meta } = useSelector(
+    (state) => state.leads,
+  );
+  const { hasFetched: hasFetchedUsers } = useSelector((state) => state.users);
+  const isAdmin = currentUser?.role === "ADMIN";
+
   useEffect(() => {
-    if (!hasFetched && !isLoading) {
-      dispatch(fetchLeads());
+    // 1. Fetch leads ONLY if we haven't fetched them yet (Defaults to page 1)
+    if (!hasFetchedLeads && !isLoading) {
+      dispatch(fetchLeads({ page: 1, limit: meta.itemsPerPage }));
     }
-    if (users.length === 0) dispatch(fetchUsers());
-  }, [dispatch, users.length, isLoading, hasFetched]);
+
+    // 2. Fetch users ONLY if we haven't fetched them AND the user is an admin
+    if (isAdmin && !hasFetchedUsers) {
+      dispatch(fetchUsers());
+    }
+  }, [dispatch, hasFetchedLeads, hasFetchedUsers, isLoading, isAdmin ,meta.itemsPerPage]);
+
+  // Create this function right below your useEffect
+  const handlePageChange = (newPage) => {
+    // Only fetch if the page is actually valid
+    if (newPage >= 1 && newPage <= meta.totalPages) {
+      // Dispatching directly here bypasses the `hasFetched` block!
+      dispatch(fetchLeads({ page: newPage, limit: meta.itemsPerPage }));
+    }
+  };
 
   const handleCloseModal = () => {
     setActiveModal(null);
@@ -180,8 +199,6 @@ const Leads = () => {
   const sanitizePhone = (phone) => phone?.replace(/\D/g, "") ?? "";
   const leadsList = Array.isArray(leads) ? leads : [];
   const staffUsers = Array.isArray(users) ? users : [];
-  const isAdmin = currentUser?.role === "ADMIN";
-
   return (
     <div className="space-y-5 px-1">
       {/* ── Page Header ── */}
@@ -223,10 +240,26 @@ const Leads = () => {
         </div>
 
         <div className="divide-y divide-gray-100 dark:divide-dark-border">
-          {isLoading && leadsList.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-gray-400">
-              Loading leads…
-            </div>
+          {isLoading ? (
+            [...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[2fr_1fr_1fr_1.5fr_auto] gap-4 items-center px-6 py-4 animate-pulse"
+              >
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                  <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/2"></div>
+                </div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                <div className="flex gap-2">
+                  <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                </div>
+              </div>
+            ))
           ) : leadsList.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-gray-400">
               No leads yet. Add your first lead!
@@ -346,14 +379,42 @@ const Leads = () => {
             })
           )}
         </div>
+        {/* 👇 REPLACE YOUR PREV/NEXT BUTTONS WITH THIS STYLED FOOTER */}
+        {meta?.totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Showing <span className="font-semibold text-gray-900 dark:text-white">{(meta.currentPage - 1) * meta.itemsPerPage + 1}</span> to <span className="font-semibold text-gray-900 dark:text-white">{Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}</span> of <span className="font-semibold text-gray-900 dark:text-white">{meta.totalItems}</span> leads
+            </span>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(meta.currentPage - 1)}
+                disabled={meta.currentPage === 1 || isLoading}
+                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              
+              <span className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Page {meta.currentPage} of {meta.totalPages}
+              </span>
+              
+              <button
+                onClick={() => handlePageChange(meta.currentPage + 1)}
+                disabled={meta.currentPage === meta.totalPages || isLoading}
+                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Mobile Cards ── */}
       <div className="md:hidden space-y-3">
-        {isLoading && leadsList.length === 0 ? (
-          <div className="text-center py-10 text-sm text-gray-400">
-            Loading leads…
-          </div>
+        {isLoading ? (
+          <MobileCardSkeleton />
         ) : leadsList.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-400">
             No leads yet. Add your first lead!
@@ -704,6 +765,7 @@ const Leads = () => {
     </div>
   );
 };
+export default Leads;
 
 /* ─── Small reusable sub-components ─── */
 
@@ -739,7 +801,6 @@ const MobileActionBtn = ({ href, label, color, children }) => (
 
 // ... keep AssignSelect and ModalFooter exactly the same
 
-export default Leads;
 /* ─── Small reusable sub-components ─── */
 
 const AssignSelect = ({
