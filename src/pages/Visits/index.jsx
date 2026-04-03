@@ -17,6 +17,7 @@ import {
   PhoneIcon,
   CheckSquareOffsetIcon,
 } from "@phosphor-icons/react";
+import { TableSkeleton } from "../../components/ui/Skeletons";
 
 const Visits = () => {
   const dispatch = useDispatch();
@@ -199,15 +200,8 @@ const Visits = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-dark-surface divide-y divide-gray-200 dark:divide-dark-border">
-              {isLoading && visitsList.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="5"
-                    className="px-6 py-8 text-center text-sm text-gray-500"
-                  >
-                    Loading schedules...
-                  </td>
-                </tr>
+              {isLoading ? (
+                <TableSkeleton columns={5} />
               ) : visitsList.length === 0 ? (
                 <tr>
                   <td

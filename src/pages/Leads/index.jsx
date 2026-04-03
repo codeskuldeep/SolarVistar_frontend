@@ -21,6 +21,7 @@ import {
   // 2. 👇 Import an icon for the Quotation button (Receipt or FileText)
   ReceiptIcon,
 } from "@phosphor-icons/react";
+import { MobileCardSkeleton } from "../../components/ui/Skeletons";
 
 /* ─── Status config ─── */
 const STATUS_CONFIG = {
@@ -239,10 +240,26 @@ const Leads = () => {
         </div>
 
         <div className="divide-y divide-gray-100 dark:divide-dark-border">
-          {isLoading && leadsList.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-gray-400">
-              Loading leads…
-            </div>
+          {isLoading ? (
+            [...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[2fr_1fr_1fr_1.5fr_auto] gap-4 items-center px-6 py-4 animate-pulse"
+              >
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                  <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/2"></div>
+                </div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                <div className="flex gap-2">
+                  <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                </div>
+              </div>
+            ))
           ) : leadsList.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-gray-400">
               No leads yet. Add your first lead!
@@ -396,10 +413,8 @@ const Leads = () => {
 
       {/* ── Mobile Cards ── */}
       <div className="md:hidden space-y-3">
-        {isLoading && leadsList.length === 0 ? (
-          <div className="text-center py-10 text-sm text-gray-400">
-            Loading leads…
-          </div>
+        {isLoading ? (
+          <MobileCardSkeleton />
         ) : leadsList.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-400">
             No leads yet. Add your first lead!

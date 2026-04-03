@@ -4,7 +4,7 @@ import api from "../../services/api"; // Adjust path to where your axios instanc
 // Fetch all users (Requires a GET /api/users route in your backend)
 export const fetchUsers = createAsyncThunk(
   "users/fetchUsers",
-  async ({ page = 1, limit = 5 } = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get("/users", {
         params: { page, limit },
