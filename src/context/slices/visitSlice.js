@@ -1,43 +1,52 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../services/api'; 
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "../../services/api";
 
 // 1. Fetch Visits
 export const fetchVisits = createAsyncThunk(
-  'visits/fetchVisits',
-  async (_, { rejectWithValue }) => {
+  "visits/fetchVisits",
+  async ({ page = 1, limit = 10 }, { rejectWithValue }) => {
     try {
-      const response = await api.get('/visits');
-      return response.data.data.visits;
+      const response = await api.get("/visits", { params: { page, limit } });
+      return {
+        visits: response.data.data.visits,
+        meta: response.data.data.meta,
+      };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch visits');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch visits",
+      );
     }
-  }
+  },
 );
 
 // 2. Create Visit
 export const createVisit = createAsyncThunk(
-  'visits/createVisit',
+  "visits/createVisit",
   async (visitData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/visits', visitData);
+      const response = await api.post("/visits", visitData);
       return response.data.data.visit;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to schedule visit');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to schedule visit",
+      );
     }
-  }
+  },
 );
 
 // 3. Update Visit Status (& Post-Visit Notes)
 export const updateVisitStatus = createAsyncThunk(
-  'visits/updateVisitStatus',
+  "visits/updateVisitStatus",
   async ({ id, updateData }, { rejectWithValue }) => {
     try {
       const response = await api.patch(`/visits/${id}/status`, updateData);
       return response.data.data.visit;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update visit');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update visit",
+      );
     }
-  }
+  },
 );
 
 const initialState = {
@@ -46,10 +55,16 @@ const initialState = {
   error: null,
   successMessage: null,
   hasFetched: false,
+  meta: {
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+  },
 };
 
 const visitSlice = createSlice({
-  name: 'visits',
+  name: "visits",
   initialState,
   reducers: {
     clearVisitMessages: (state) => {
@@ -62,7 +77,7 @@ const visitSlice = createSlice({
       state.error = null;
       state.successMessage = null;
       state.hasFetched = false;
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -73,9 +88,9 @@ const visitSlice = createSlice({
       })
       .addCase(fetchVisits.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.visits = action.payload;
+        state.meta = action.payload.meta;
+        state.visits = action.payload.visits;
         state.hasFetched = true;
-
       })
       .addCase(fetchVisits.rejected, (state, action) => {
         state.isLoading = false;
@@ -91,8 +106,10 @@ const visitSlice = createSlice({
         state.isLoading = false;
         // Insert and sort to keep chronological order based on datetime
         state.visits.push(action.payload);
-        state.visits.sort((a, b) => new Date(a.visitDatetime) - new Date(b.visitDatetime));
-        state.successMessage = 'Visit scheduled successfully';
+        state.visits.sort(
+          (a, b) => new Date(a.visitDatetime) - new Date(b.visitDatetime),
+        );
+        state.successMessage = "Visit scheduled successfully";
       })
       .addCase(createVisit.rejected, (state, action) => {
         state.isLoading = false;
@@ -110,7 +127,7 @@ const visitSlice = createSlice({
         if (index !== -1) {
           state.visits[index] = { ...state.visits[index], ...action.payload };
         }
-        state.successMessage = 'Visit updated successfully';
+        state.successMessage = "Visit updated successfully";
       })
       .addCase(updateVisitStatus.rejected, (state, action) => {
         state.isLoading = false;

@@ -1,56 +1,72 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../services/api'; // Adjust path to where your axios instance is
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "../../services/api"; // Adjust path to where your axios instance is
 
 // Fetch all users (Requires a GET /api/users route in your backend)
 export const fetchUsers = createAsyncThunk(
-  'users/fetchUsers',
-  async (_, { rejectWithValue }) => {
+  "users/fetchUsers",
+  async ({ page = 1, limit = 5 } = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get('/users');
-      console.log('API Response for fetchUsers:', response.data); // Debug log
-      return response.data.data.users ?? [];
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch users');
-    }
-  }
-);
+      const response = await api.get("/users", {
+        params: { page, limit },
+      });
 
+      return {
+        users: response.data.data.users ?? [],
+        meta: response.data.data.meta,
+      };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch users",
+      );
+    }
+  },
+);
 // Create a new user
 export const createUser = createAsyncThunk(
-  'users/createUser',
+  "users/createUser",
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/users', userData);
+      const response = await api.post("/users", userData);
       return response.data.data.user;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create user');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create user",
+      );
     }
-  }
+  },
 );
 
 // Delete a user
 export const deleteUser = createAsyncThunk(
-  'users/deleteUser',
+  "users/deleteUser",
   async (id, { rejectWithValue }) => {
     try {
       await api.delete(`/users/${id}`);
       return id; // Return the ID so we can filter it out of the state
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete user');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete user",
+      );
     }
-  }
+  },
 );
 
 const initialState = {
   users: [],
   isLoading: false,
   error: null,
-  hasFetched: false, // 👈 1. ADD THIS FLAG
+  hasFetched: false,
   successMessage: null,
+  meta: {
+    totalItems: 0,
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalPages: 0,
+  },
 };
 
 const userSlice = createSlice({
-  name: 'users',
+  name: "users",
   initialState,
   reducers: {
     clearUserMessages: (state) => {
@@ -60,11 +76,10 @@ const userSlice = createSlice({
     resetUserState: (state) => {
       state.users = [];
       state.isLoading = false;
-      state.hasFetched = false; // 👈 2. RESET IT ON LOGOUT
+      state.hasFetched = false;
       state.error = null;
       state.successMessage = null;
-    }
-
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -75,7 +90,8 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.users = action.payload;
+        state.users = action.payload.users;
+        state.meta = action.payload.meta; // 👈 3. STORE META
         state.hasFetched = true;
       })
       .addCase(fetchUsers.rejected, (state, action) => {
@@ -91,7 +107,7 @@ const userSlice = createSlice({
       .addCase(createUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.users.push(action.payload);
-        state.successMessage = 'User created successfully';
+        state.successMessage = "User created successfully";
       })
       .addCase(createUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -106,7 +122,7 @@ const userSlice = createSlice({
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.users = state.users.filter((user) => user.id !== action.payload);
-        state.successMessage = 'User deleted successfully';
+        state.successMessage = "User deleted successfully";
       })
       .addCase(deleteUser.rejected, (state, action) => {
         state.isLoading = false;

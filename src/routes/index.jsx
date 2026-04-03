@@ -2,7 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import Login from "../pages/login"; // Adjust path if needed
 import ProtectedRoute from "./ProtectedRoutes";
 import DashboardLayout from "../components/layout/DashboardLayout"; // 👈 Import Layout
-import UserManagement from "../pages/userManagement"; // Placeholder for future user management page
+import UserManagement from "../pages/UserManagement"; // Placeholder for future user management page
 import Leads from "../pages/Leads";
 import Visits from "../pages/Visits";
 import Overview from "../pages/Dashboard"; // Import the new Dashboard component

@@ -17,10 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 
 
-//Pagination
 
 //Leads Debouncing 
 
 //Quotations Send to whatsapp!
-
-//Remote set 
