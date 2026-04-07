@@ -7,7 +7,6 @@ import {
   clearVisitMessages,
 } from "../../context/slices/visitSlice";
 import { fetchUsers } from "../../context/slices/userSlice";
-import { fetchLeads } from "../../context/slices/leadSlice";
 import { addToast } from "../../context/slices/toastSlice";
 import {
   CalendarPlusIcon,
@@ -18,18 +17,67 @@ import {
   CheckSquareOffsetIcon,
 } from "@phosphor-icons/react";
 import { TableSkeleton } from "../../components/ui/Skeletons";
+import Pagination from "../../components/ui/Pagination";
+import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
+import { createLead, fetchLeads } from "../../context/slices/leadSlice";
+
+const QuickLeadModal = ({ onClose, onCreated }) => {
+  const dispatch = useDispatch();
+  const [formData, setFormData] = useState({ customerName: "", phoneNumber: "" });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const res = await dispatch(createLead(formData));
+    setLoading(false);
+    if (!res.error && res.payload?.data?.lead) {
+      onCreated(res.payload.data.lead.id);
+    } else {
+      onClose(); // Close anyway if error or strange response
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 dark:border-slate-800">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Quick Create Lead</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer Name *</label>
+            <input type="text" required value={formData.customerName} onChange={(e) => setFormData({ ...formData, customerName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-emerald-500 bg-white dark:bg-slate-950 dark:text-white" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number *</label>
+            <input type="tel" required value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-emerald-500 bg-white dark:bg-slate-950 dark:text-white" />
+          </div>
+          <div className="flex justify-end pt-2 gap-3">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg border border-gray-300 dark:border-slate-700">Cancel</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50">
+              {loading ? "Saving..." : "Create Lead"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const Visits = () => {
   const dispatch = useDispatch();
 
-  const { visits, isLoading, error, successMessage, hasFetched, meta } =
+  const { visits, isLoading, error, successMessage, hasFetched: visitsFetched, meta } =
     useSelector((state) => state.visits);
-  const { users } = useSelector((state) => state.users);
-  const { leads } = useSelector((state) => state.leads);
+  const { users, hasFetched: usersFetched } = useSelector((state) => state.users);
+  const { leads, hasFetched: leadsFetched } = useSelector((state) => state.leads);
   const { user: currentUser } = useSelector((state) => state.auth);
 
   const [activeModal, setActiveModal] = useState(null); // 'CREATE', 'UPDATE'
   const [selectedVisit, setSelectedVisit] = useState(null);
+  const [showQuickLead, setShowQuickLead] = useState(false);
 
   const [createData, setCreateData] = useState({
     customerName: "",
@@ -52,16 +100,16 @@ const Visits = () => {
   });
 
   useEffect(() => {
-    if (!hasFetched && !isLoading)
-      dispatch(fetchVisits({ page: 1, limit: meta.itemsPerPage })); // Fetch all visits for simplicity
-    if (users.length === 0) dispatch(fetchUsers());
-    if (leads.length === 0) dispatch(fetchLeads());
+    if (!visitsFetched && !isLoading)
+      dispatch(fetchVisits({ page: 1, limit: meta.itemsPerPage })); 
+    if (!usersFetched) dispatch(fetchUsers());
+    if (!leadsFetched) dispatch(fetchLeads());
   }, [
     dispatch,
-    hasFetched,
+    visitsFetched,
     isLoading,
-    users.length,
-    leads.length,
+    usersFetched,
+    leadsFetched,
     meta.itemsPerPage,
   ]);
 
@@ -258,14 +306,23 @@ const Visits = () => {
                         >
                           {(visit.status || "SCHEDULED").replace("_", " ")}
                         </span>
-                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        <div className="flex items-start text-xs text-gray-500 dark:text-gray-400 mt-2">
                           <UserIcon
                             size={16}
                             weight="regular"
-                            className="mr-1.5"
+                            className="mr-1.5 mt-0.5"
                           />
-                          {visit.assignedStaff?.name || (
-                            <span className="italic">Unassigned</span>
+                          {visit.assignedStaff?.name ? (
+                            <div>
+                              <span>{visit.assignedStaff.name}</span>
+                              {visit.assignedStaff.department && (
+                                <span className="block text-xs text-gray-400">
+                                  {visit.assignedStaff.department?.name || visit.assignedStaff.department}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="italic mt-0.5">Unassigned</span>
                           )}
                         </div>
                       </td>
@@ -325,41 +382,66 @@ const Visits = () => {
                   onSubmit={handleCreateSubmit}
                   className="space-y-4"
                 >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Customer Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={createData.customerName}
-                        onChange={(e) =>
-                          setCreateData({
-                            ...createData,
-                            customerName: e.target.value,
-                          })
+                  <div className="space-y-4">
+                    <SearchAutocomplete
+                      items={leads}
+                      selectedId={createData.leadId}
+                      onSelect={(id) => {
+                        const selectedLead = leads.find((l) => l.id === id);
+                        if (selectedLead) {
+                          setCreateData((prev) => ({
+                            ...prev,
+                            leadId: id,
+                            customerName: selectedLead.customerName,
+                            phoneNumber: selectedLead.phoneNumber,
+                            address: selectedLead.address || "TBD (No address on lead)",
+                          }));
+                        } else {
+                          setCreateData((prev) => ({
+                            ...prev,
+                            leadId: "",
+                            customerName: "",
+                            phoneNumber: "",
+                            address: "",
+                          }));
                         }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md shadow-sm focus:ring-1 focus:ring-green-500 dark:bg-dark-bg dark:text-white sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        value={createData.phoneNumber}
-                        onChange={(e) =>
-                          setCreateData({
-                            ...createData,
-                            phoneNumber: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md shadow-sm focus:ring-1 focus:ring-green-500 dark:bg-dark-bg dark:text-white sm:text-sm"
-                      />
-                    </div>
+                      }}
+                      label="Select Lead *"
+                      placeholder="Search lead by name or phone..."
+                      required={true}
+                      selectedTheme="emerald"
+                      renderItem={(lead, isSelected) =>
+                        isSelected ? (
+                          `${lead.customerName} (${lead.phoneNumber})`
+                        ) : (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {lead.customerName}
+                            </span>
+                            <span className="text-xs text-gray-500">{lead.phoneNumber}</span>
+                          </div>
+                        )
+                      }
+                      searchFilter={(lead, term) => {
+                        const lowerTerm = term.toLowerCase();
+                        return (
+                          (lead.customerName || "").toLowerCase().includes(lowerTerm) ||
+                          (lead.phoneNumber || "").includes(term)
+                        );
+                      }}
+                      noResultsAction={(closeDropdown) => (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            closeDropdown();
+                            setShowQuickLead(true);
+                          }}
+                          className="w-full text-center py-2 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium"
+                        >
+                          + Create New Lead
+                        </button>
+                      )}
+                    />
                   </div>
 
                   <div>
@@ -382,24 +464,6 @@ const Visits = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Address / Location *
-                    </label>
-                    <textarea
-                      required
-                      rows="2"
-                      value={createData.address}
-                      onChange={(e) =>
-                        setCreateData({
-                          ...createData,
-                          address: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md shadow-sm focus:ring-1 focus:ring-green-500 dark:bg-dark-bg dark:text-white sm:text-sm"
-                    ></textarea>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Purpose of Visit *
                     </label>
                     <input
@@ -417,67 +481,31 @@ const Visits = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Link to Lead (Optional)
-                      </label>
-                      <select
-                        value={createData.leadId}
-                        onChange={(e) =>
-                          setCreateData({
-                            ...createData,
-                            leadId: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md shadow-sm focus:ring-1 focus:ring-green-500 dark:bg-dark-bg dark:text-white sm:text-sm"
-                      >
-                        <option value="">-- No Lead --</option>
-                        {leadsList.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.customerName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div
-                      className={
-                        currentUser?.role !== "ADMIN" ? "tooltip-wrapper" : ""
+                  <div className="pt-2 border-t border-gray-200 dark:border-slate-800">
+                    <SearchAutocomplete
+                      items={staffUsers}
+                      selectedId={createData.assignedStaffId}
+                      onSelect={(id) => setCreateData((prev) => ({ ...prev, assignedStaffId: id }))}
+                      label="Assign Staff"
+                      placeholder={currentUser?.role === "ADMIN" ? "Search staff by name..." : "You cannot assign staff"}
+                      selectedTheme="neutral"
+                      disabled={currentUser?.role !== "ADMIN"}
+                      renderItem={(staff, isSelected) =>
+                        isSelected ? (
+                          `${staff.name} (${staff.department || staff.role})`
+                        ) : (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {staff.name}
+                            </span>
+                            <span className="text-xs text-gray-500">{staff.department || staff.role}</span>
+                          </div>
+                        )
                       }
-                    >
-                      {currentUser?.role !== "ADMIN" && (
-                        <span className="tooltip-text">
-                          Can't access: Assign Staff
-                        </span>
-                      )}
-                      <label
-                        className={`block text-sm font-medium mb-1 ${currentUser?.role === "ADMIN" ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-600"}`}
-                      >
-                        Assign Staff
-                      </label>
-                      <select
-                        value={createData.assignedStaffId}
-                        disabled={currentUser?.role !== "ADMIN"}
-                        onChange={(e) =>
-                          setCreateData({
-                            ...createData,
-                            assignedStaffId: e.target.value,
-                          })
-                        }
-                        className={`w-full px-3 py-2 border rounded-md sm:text-sm ${
-                          currentUser?.role === "ADMIN"
-                            ? "border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-white focus:ring-1 focus:ring-blue-500"
-                            : "border-gray-200 dark:border-dark-border bg-gray-100 dark:bg-dark-bg/50 text-gray-400 dark:text-gray-600 cursor-not-allowed"
-                        }`}
-                      >
-                        <option value="">-- Unassigned --</option>
-                        {staffUsers.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                      searchFilter={(staff, term) =>
+                        (staff.name || "").toLowerCase().includes(term.toLowerCase())
+                      }
+                    />
                   </div>
                 </form>
               )}
@@ -665,47 +693,23 @@ const Visits = () => {
           </div>
         </div>
       )}
-      {meta?.totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Showing{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {(meta.currentPage - 1) * meta.itemsPerPage + 1}
-            </span>{" "}
-            to{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {meta.totalItems}
-            </span>{" "}
-            leads
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePageChange(meta.currentPage - 1)}
-              disabled={meta.currentPage === 1 || isLoading}
-              className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-
-            <span className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Page {meta.currentPage} of {meta.totalPages}
-            </span>
-
-            <button
-              onClick={() => handlePageChange(meta.currentPage + 1)}
-              disabled={meta.currentPage === meta.totalPages || isLoading}
-              className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+      
+      {showQuickLead && (
+        <QuickLeadModal
+          onClose={() => setShowQuickLead(false)}
+          onCreated={(id) => {
+            dispatch(fetchLeads());
+            setCreateData((prev) => ({ ...prev, leadId: id }));
+            setShowQuickLead(false);
+          }}
+        />
       )}
+      <Pagination 
+        meta={meta} 
+        isLoading={isLoading} 
+        onPageChange={handlePageChange} 
+        itemName="visits" 
+      />
     </div>
   );
 };

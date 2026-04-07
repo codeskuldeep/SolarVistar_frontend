@@ -21,27 +21,31 @@ export const getCurrentUser = createAsyncThunk(
       const response = await api.get("/auth/me"); // cookie automatically sent
       return { user: response.data.data.user };
     } catch (error) {
-      return rejectWithValue(null); // user not logged in
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch quotations",
+      );
     }
   },
 );
 
 export const logoutUser =  createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
   try {
-    await api.post("/auth/logout"); // Hit backend logout to clear cookie
+    await api.post("/auth/logout"); 
   } catch (error) {
-    return rejectWithValue("Logout failed");
+     return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch quotations",
+      );
   }
 });
 
 
 const authSlice = createSlice({
   name: "auth",
-  // Start fresh. If there is no user in state, they aren't logged in.
+ 
   initialState: {
     user: null,
     isAuthenticated: false,
-    isLoading: true, // Start true so ProtectedRoute waits for the auth check before redirecting
+    isLoading: true, 
     error: null,
   },
   reducers: {
@@ -64,7 +68,7 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user; // We only store the user profile now
+        state.user = action.payload.user; 
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;

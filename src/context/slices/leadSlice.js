@@ -1,13 +1,11 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../services/api'; // Adjust path if needed
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "../../services/api"; // Adjust path if needed
 
 // 1. Fetch Leads
 export const fetchLeads = createAsyncThunk(
   "leads/fetchLeads",
-  async (params = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10 }, { rejectWithValue }) => {
     try {
-      const { page = 1, limit = 10 } = params;
-
       const response = await api.get("/leads", {
         params: { page, limit },
       });
@@ -18,53 +16,87 @@ export const fetchLeads = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch leads"
+        error.response?.data?.message || "Failed to fetch leads",
       );
     }
-  }
+  },
 );
+
+// In slices/leadSlice.js
+
+// Fetch ONLY converted customers
+export const fetchExistingCustomers = createAsyncThunk(
+  "leads/fetchExistingCustomers",
+  async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
+    try {
+      // 🔥 Notice the ?status=CONVERTED in the URL
+      const response = await api.get("/leads", {
+        params: { page, limit, status: "CONVERTED" },
+      });
+      return {
+        customers: response.data.data.leads,
+        meta: response.data.data.meta,
+      };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch customers",
+      );
+    }
+  },
+);
+
 // 2. Create Lead
 export const createLead = createAsyncThunk(
-  'leads/createLead',
+  "leads/createLead",
   async (leadData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/leads', leadData);
+      const response = await api.post("/leads", leadData);
       return response.data.data.lead;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create lead');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create lead",
+      );
     }
-  }
+  },
 );
 
 // 3. Update Lead Status (& Reassign)
 export const updateLeadStatus = createAsyncThunk(
-  'leads/updateLeadStatus',
+  "leads/updateLeadStatus",
   async ({ id, status, assignedToId }, { rejectWithValue }) => {
     try {
-      const response = await api.patch(`/leads/${id}/status`, { status, assignedToId });
+      const response = await api.patch(`/leads/${id}/status`, {
+        status,
+        assignedToId,
+      });
       return response.data.data.lead;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update lead');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update lead",
+      );
     }
-  }
+  },
 );
 
 // 4. Add Follow-Up
 export const addFollowUp = createAsyncThunk(
-  'leads/addFollowUp',
+  "leads/addFollowUp",
   async ({ id, followUpData }, { rejectWithValue }) => {
     try {
       const response = await api.post(`/leads/${id}/followups`, followUpData);
       return { leadId: id, followUp: response.data.data.followUp };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to add follow-up');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to add follow-up",
+      );
     }
-  }
+  },
 );
 
 const initialState = {
   leads: [],
-   meta: {
+  existingCustomersList: [], // 👈 1. MUST ADD THIS ARRAY
+  meta: {
     totalItems: 0,
     currentPage: 1,
     itemsPerPage: 10,
@@ -74,10 +106,11 @@ const initialState = {
   error: null,
   successMessage: null,
   hasFetched: false,
+  hasFetchedCustomers: false, // 👈 2. Tracks the customers page
 };
 
 const leadSlice = createSlice({
-  name: 'leads',
+  name: "leads",
   initialState,
   reducers: {
     clearLeadMessages: (state) => {
@@ -90,7 +123,7 @@ const leadSlice = createSlice({
       state.error = null;
       state.successMessage = null;
       state.hasFetched = false;
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -104,7 +137,6 @@ const leadSlice = createSlice({
         state.leads = action.payload.leads;
         state.meta = action.payload.meta;
         state.hasFetched = true;
-
       })
       .addCase(fetchLeads.rejected, (state, action) => {
         state.isLoading = false;
@@ -119,7 +151,7 @@ const leadSlice = createSlice({
       .addCase(createLead.fulfilled, (state, action) => {
         state.isLoading = false;
         state.leads.unshift(action.payload); // Add to top of list
-        state.successMessage = 'Lead created successfully';
+        state.successMessage = "Lead created successfully";
       })
       .addCase(createLead.rejected, (state, action) => {
         state.isLoading = false;
@@ -133,12 +165,22 @@ const leadSlice = createSlice({
       })
       .addCase(updateLeadStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.leads.findIndex((l) => l.id === action.payload.id);
-        if (index !== -1) {
-          // Merge updated lead data but preserve the followUps array from existing state
-          state.leads[index] = { ...state.leads[index], ...action.payload };
+
+        // 🔥 If the user just changed the status to CONVERTED, instantly remove it from the Leads table!
+        if (action.payload.status === "CONVERTED") {
+          state.leads = state.leads.filter((l) => l.id !== action.payload.id);
+          // (Optional) Reset customer fetch flag so the Customers page refetches next time it opens
+          state.hasFetchedCustomers = false;
+        } else {
+          // Otherwise, just update the row normally
+          const index = state.leads.findIndex(
+            (l) => l.id === action.payload.id,
+          );
+          if (index !== -1) {
+            state.leads[index] = { ...state.leads[index], ...action.payload };
+          }
         }
-        state.successMessage = 'Lead updated successfully';
+        state.successMessage = "Lead updated successfully";
       })
       .addCase(updateLeadStatus.rejected, (state, action) => {
         state.isLoading = false;
@@ -158,9 +200,24 @@ const leadSlice = createSlice({
           // Replace the single visible follow-up with the new one
           lead.followUps = [followUp];
         }
-        state.successMessage = 'Follow-up logged successfully';
+        state.successMessage = "Follow-up logged successfully";
       })
       .addCase(addFollowUp.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Fetch Existing Customers
+      .addCase(fetchExistingCustomers.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchExistingCustomers.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // 👈 3. Save the payload to the new array!
+        state.existingCustomersList = action.payload.customers;
+        state.meta = action.payload.meta;
+        state.hasFetchedCustomers = true;
+      })
+      .addCase(fetchExistingCustomers.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });

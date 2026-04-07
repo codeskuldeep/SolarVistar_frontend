@@ -80,6 +80,12 @@ const DashboardLayout = () => {
       icon: MoneyIcon,
       roles: ["ADMIN", "STAFF"],
     },
+    {
+      name: "Customers",
+      href: "/customers",
+      icon: UsersIcon,
+      roles: ["ADMIN", "STAFF"],
+    },
   ];
 
   const navigation = allNavigation.filter((item) =>

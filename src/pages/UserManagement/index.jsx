@@ -15,6 +15,7 @@ import {
   CheckCircleIcon,
 } from "@phosphor-icons/react";
 import { TableSkeleton } from "../../components/ui/Skeletons";
+import Pagination from "../../components/ui/Pagination";
 
 const Users = () => {
   const dispatch = useDispatch();
@@ -321,16 +322,19 @@ const Users = () => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Department
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
-                    placeholder="e.g. Sales"
                     required={formData.role === "STAFF"}
                     disabled={formData.role === "ADMIN"}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 dark:bg-dark-bg dark:text-white sm:text-sm disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-dark-bg/50"
-                  />
+                  >
+                    <option value="" disabled>-- Select Department --</option>
+                    <option value="Sales">Sales</option>
+                    <option value="Installation">Installation</option>
+                    <option value="Support">Support</option>
+                  </select>
                 </div>
               </div>
 
@@ -355,47 +359,12 @@ const Users = () => {
         </div>
       )}
 
-      {meta?.totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Showing{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {(meta.currentPage - 1) * meta.itemsPerPage + 1}
-            </span>{" "}
-            to{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {meta.totalItems}
-            </span>{" "}
-            leads
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePageChange(meta.currentPage - 1)}
-              disabled={meta.currentPage === 1 || isLoading}
-              className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-
-            <span className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Page {meta.currentPage} of {meta.totalPages}
-            </span>
-
-            <button
-              onClick={() => handlePageChange(meta.currentPage + 1)}
-              disabled={meta.currentPage === meta.totalPages || isLoading}
-              className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination 
+        meta={meta} 
+        isLoading={isLoading} 
+        onPageChange={handlePageChange} 
+        itemName="users" 
+      />
     </div>
   );
 };

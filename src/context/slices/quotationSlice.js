@@ -91,15 +91,16 @@ const quotationSlice = createSlice({
     quotationsList: [],
     meta: {
       totalItems: 0,
-      totalPages: 0,
+      totalPages: 1,
       currentPage: 1,
       itemsPerPage: 10,
     },
 
     currentQuotation: null,
-    status: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
-    currentQuotationStatus: "idle",
-    createStatus: "idle",
+    isLoading: false,
+    isFetchingDetails: false,
+    isSaving: false,
+    hasFetched: false,
     error: null,
   },
   reducers: {
@@ -113,9 +114,10 @@ const quotationSlice = createSlice({
     resetQuotationState: (state) => {
       state.quotationsList = [];
       state.currentQuotation = null;
-      state.status = "idle";
-      state.currentQuotationStatus = "idle";
-      state.createStatus = "idle";
+      state.isLoading = false;
+      state.isFetchingDetails = false;
+      state.isSaving = false;
+      state.hasFetched = false;
       state.error = null;
     },
   },
@@ -123,44 +125,45 @@ const quotationSlice = createSlice({
     builder
       // Fetch Quotations
       .addCase(fetchQuotations.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(fetchQuotations.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        state.quotationsList = action.payload.quotations;
-        state.meta = action.payload.meta;
+        state.isLoading = true;
         state.error = null;
       })
+      .addCase(fetchQuotations.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.quotationsList = action.payload.quotations;
+        state.meta = action.payload.meta;
+        state.hasFetched = true;
+      })
       .addCase(fetchQuotations.rejected, (state, action) => {
-        state.status = "failed";
+        state.isLoading = false;
         state.error = action.payload;
       })
 
       // Fetch Single Quotation
       .addCase(fetchQuotationById.pending, (state) => {
-        state.currentQuotationStatus = "loading";
-      })
-      .addCase(fetchQuotationById.fulfilled, (state, action) => {
-        state.currentQuotationStatus = "succeeded";
-        state.currentQuotation = action.payload;
+        state.isFetchingDetails = true;
         state.error = null;
       })
+      .addCase(fetchQuotationById.fulfilled, (state, action) => {
+        state.isFetchingDetails = false;
+        state.currentQuotation = action.payload;
+      })
       .addCase(fetchQuotationById.rejected, (state, action) => {
-        state.currentQuotationStatus = "failed";
+        state.isFetchingDetails = false;
         state.error = action.payload;
       })
 
       // Create Quotation
       .addCase(createQuotation.pending, (state) => {
-        state.createStatus = "loading";
-      })
-      .addCase(createQuotation.fulfilled, (state, action) => {
-        state.createStatus = "succeeded";
-        state.quotationsList.unshift(action.payload);
+        state.isSaving = true;
         state.error = null;
       })
+      .addCase(createQuotation.fulfilled, (state, action) => {
+        state.isSaving = false;
+        state.quotationsList.unshift(action.payload);
+      })
       .addCase(createQuotation.rejected, (state, action) => {
-        state.createStatus = "failed";
+        state.isSaving = false;
         state.error = action.payload;
       })
 
