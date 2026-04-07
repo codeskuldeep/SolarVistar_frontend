@@ -61,7 +61,7 @@ const initialState = {
     totalItems: 0,
     currentPage: 1,
     itemsPerPage: 10,
-    totalPages: 0,
+    totalPages: 1,
   },
 };
 

@@ -24,7 +24,13 @@ import {
 import { fetchLeads } from "../../context/slices/leadSlice";
 import QuotationPDFTemplate from "./QuotationPDFTemplate";
 import { useSearchParams } from "react-router-dom"; // 👈 Import this!
-import { TableSkeleton } from "../../components/ui/Skeletons";
+import { TableSkeleton, MobileCardSkeleton } from "../../components/ui/Skeletons";
+import Pagination from "../../components/ui/Pagination";
+import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
+
+
+
+
 export default function QuotationManager() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -121,7 +127,7 @@ export default function QuotationManager() {
    ========================================= */
 const QuotationList = ({ onView }) => {
   const dispatch = useDispatch();
-  const { quotationsList, status, error, meta } = useSelector(
+  const { quotationsList, isLoading, hasFetched, error, meta } = useSelector(
     (state) => state.quotations,
   );
 
@@ -156,10 +162,10 @@ const QuotationList = ({ onView }) => {
   }, [quotationsList, debouncedSearch]); 
 
   useEffect(() => {
-    if (status === "idle") {
+    if (!hasFetched && !isLoading) {
       dispatch(fetchQuotations({ page: 1, limit: meta.itemsPerPage }));
     }
-  }, [dispatch, status]);
+  }, [dispatch, hasFetched, isLoading, meta.itemsPerPage]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= meta.totalPages) {
@@ -169,7 +175,7 @@ const QuotationList = ({ onView }) => {
 
 
 
-  if (status === "failed") {
+  if (error && !isLoading && !hasFetched) {
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-md">
         Error: {error}
@@ -194,7 +200,8 @@ const QuotationList = ({ onView }) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* ── Desktop Table ── */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-gray-50 dark:bg-slate-950/50 border-b border-gray-200 dark:border-slate-800 text-gray-500 dark:text-slate-400 font-medium">
             <tr>
@@ -207,7 +214,7 @@ const QuotationList = ({ onView }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
-            {status === "loading" ? (
+            {isLoading ? (
               <TableSkeleton columns={6} />
             ) : quotationsList.length === 0 ? (
               <tr>
@@ -273,51 +280,68 @@ const QuotationList = ({ onView }) => {
             )}
           </tbody>
         </table>
-        {meta?.totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Showing{" "}
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {(meta.currentPage - 1) * meta.itemsPerPage + 1}
-              </span>{" "}
-              to{" "}
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {Math.min(
-                  meta.currentPage * meta.itemsPerPage,
-                  meta.totalItems,
-                )}
-              </span>{" "}
-              of{" "}
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {meta.totalItems}
-              </span>{" "}
-              leads
-            </span>
+      </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(meta.currentPage - 1)}
-                disabled={meta.currentPage === 1 || status === "loading"} 
-                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-
-              <span className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Page {meta.currentPage} of {meta.totalPages}
-              </span>
-
-              <button
-                onClick={() => handlePageChange(meta.currentPage + 1)}
-                disabled={meta.currentPage === meta.totalPages || status === "loading"}
-                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
-            </div>
+      {/* ── Mobile Cards ── */}
+      <div className="md:hidden space-y-3 p-4 pt-2">
+        {isLoading ? (
+          <MobileCardSkeleton />
+        ) : quotationsList.length === 0 ? (
+          <div className="text-center py-10 text-sm text-gray-400">
+            No quotations found. Create one to get started.
           </div>
+        ) : (
+          filteredQuotations.map((q) => (
+            <div
+              key={q.id}
+              className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden"
+            >
+              <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-2 border-b border-gray-50 dark:border-slate-800/50">
+                <div className="min-w-0">
+                  <div className="text-base font-bold text-gray-900 dark:text-white truncate">
+                    {q.lead?.customerName || "Unknown Lead"}
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                    <span className="text-xs text-gray-500 dark:text-slate-400">
+                      {q.lead?.phoneNumber}
+                    </span>
+                  </div>
+                </div>
+                {q.quotationValue && (
+                  <span className="flex-shrink-0 inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-transparent dark:border-emerald-500/20">
+                     ₹{Number(q.quotationValue).toLocaleString("en-IN")}
+                  </span>
+                )}
+              </div>
+              <div className="px-4 py-3 grid grid-cols-2 gap-y-2 text-xs text-gray-600 dark:text-slate-300 bg-gray-50/50 dark:bg-slate-900/30">
+                <div>
+                  <span className="block text-gray-400 dark:text-slate-500 mb-0.5">Load</span>
+                  {q.loadKw ? `${q.loadKw} kW` : "-"}
+                </div>
+                <div>
+                  <span className="block text-gray-400 dark:text-slate-500 mb-0.5">Panel</span>
+                  {q.panelType || "-"}
+                </div>
+              </div>
+              <div className="px-3 py-2 flex items-center bg-gray-50 dark:bg-slate-800/50 justify-end">
+                <button
+                  onClick={() => onView(q.id)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 transition-colors"
+                >
+                  View Details <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
+
+      <Pagination 
+        meta={meta} 
+        isLoading={isLoading} 
+        onPageChange={handlePageChange} 
+        itemName="quotations" 
+      />
     </div>
   );
 };
@@ -336,7 +360,14 @@ const QuotationForm = ({
   initialLeadId = "",
 }) => {
   const dispatch = useDispatch();
-  const { createStatus, error } = useSelector((state) => state.quotations);
+  const { isSaving, error } = useSelector((state) => state.quotations);
+  const { leads, hasFetched: leadsFetched, isLoading: leadsLoading } = useSelector((state) => state.leads);
+
+  useEffect(() => {
+    if (!leadsFetched && !leadsLoading) {
+      dispatch(fetchLeads({ page: 1, limit: 1000 }));
+    }
+  }, [leadsFetched, leadsLoading, dispatch]);
 
   const [formData, setFormData] = useState({
     leadId: initialLeadId || "",
@@ -442,11 +473,36 @@ const QuotationForm = ({
         <div className="mb-6">
           {/* Disable lead search if editing, because the quotation is already tied to the lead! */}
           {!isEdit ? (
-            <LeadSearchAutocomplete
-              selectedLeadId={formData.leadId || ""}
+            <SearchAutocomplete
+              items={leads}
+              selectedId={formData.leadId || ""}
               onSelect={(id) =>
                 setFormData((prev) => ({ ...prev, leadId: id }))
               }
+              label="Search Customer / Lead"
+              placeholder="Type name or phone number..."
+              required={true}
+              isLoading={leadsLoading}
+              selectedTheme="emerald"
+              renderItem={(lead, isSelected) =>
+                isSelected ? (
+                  `${lead.customerName} (${lead.phoneNumber})`
+                ) : (
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {lead.customerName}
+                    </span>
+                    <span className="text-xs text-gray-500">{lead.phoneNumber}</span>
+                  </div>
+                )
+              }
+              searchFilter={(lead, term) => {
+                const lowerTerm = term.toLowerCase();
+                return (
+                  (lead.customerName || "").toLowerCase().includes(lowerTerm) ||
+                  (lead.phoneNumber || "").includes(term)
+                );
+              }}
             />
           ) : (
             <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-md border border-gray-200 dark:border-slate-700">
@@ -654,14 +710,14 @@ const QuotationForm = ({
           <button
             type="submit"
             disabled={
-              createStatus === "loading" || (!isEdit && !formData.leadId)
+              isSaving || (!isEdit && !formData.leadId)
             }
             className="flex items-center px-5 py-2 bg-emerald-600 text-white font-medium rounded-md hover:bg-emerald-700 dark:hover:bg-emerald-500 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {createStatus === "loading" ? (
+            {isSaving ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : null}
-            {createStatus === "loading"
+            {isSaving
               ? "Saving..."
               : isEdit
                 ? "Update Quotation"
@@ -669,135 +725,6 @@ const QuotationForm = ({
           </button>
         </div>
       </form>
-    </div>
-  );
-};
-/* =========================================
-   DEBOUNCED AUTOCOMPLETE COMPONENT (DUAL THEME)
-   ========================================= */
-const LeadSearchAutocomplete = ({ selectedLeadId, onSelect }) => {
-  const dispatch = useDispatch();
-  const { leads, isLoading } = useSelector((state) => state.leads);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedTerm, setDebouncedTerm] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const wrapperRef = useRef(null);
-
-  const hasFetched = useRef(false);
-
-  useEffect(() => {
-    if (leads.length === 0 && !hasFetched.current) {
-      dispatch(fetchLeads());
-      hasFetched.current = true;
-    }
-  }, [leads.length, isLoading, dispatch]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedTerm(searchTerm), 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target))
-        setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const displayLeads = debouncedTerm
-    ? (leads || [])
-        .filter((l) => {
-          const nameMatch = String(l.customerName || "")
-            .toLowerCase()
-            .includes(debouncedTerm.toLowerCase());
-          const phoneMatch = String(l.phoneNumber || "").includes(
-            debouncedTerm,
-          );
-          return nameMatch || phoneMatch;
-        })
-        .slice(0, 8)
-    : (leads || []).slice(0, 8);
-
-  const selectedLead = (leads || []).find((l) => l.id === selectedLeadId);
-
-  const handleClear = () => {
-    setSearchTerm("");
-    setDebouncedTerm("");
-    onSelect("");
-  };
-
-  return (
-    <div className="relative w-full md:w-1/2" ref={wrapperRef}>
-      <label className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5 block">
-        Search Customer / Lead{" "}
-        <span className="text-red-500 dark:text-emerald-500">*</span>
-      </label>
-
-      {selectedLead ? (
-        <div className="flex items-center justify-between w-full px-4 py-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/50 rounded-md shadow-sm transition-colors">
-          <div className="flex items-center">
-            <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mr-2" />
-            <span className="text-emerald-900 dark:text-emerald-100 text-sm font-medium">
-              {selectedLead.customerName} ({selectedLead.phoneNumber})
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleClear}
-            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      ) : (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
-          <input
-            type="text"
-            className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-md text-sm text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-colors placeholder-gray-400 dark:placeholder-slate-600 shadow-sm"
-            placeholder="Type name or phone number..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setIsOpen(true);
-            }}
-            onFocus={() => setIsOpen(true)}
-          />
-
-          {isOpen && (
-            <ul className="absolute z-50 w-full mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg dark:shadow-2xl max-h-60 overflow-y-auto">
-              {displayLeads.length > 0 ? (
-                displayLeads.map((lead) => (
-                  <li
-                    key={lead.id}
-                    onClick={() => {
-                      onSelect(lead.id);
-                      setIsOpen(false);
-                      setSearchTerm("");
-                      setDebouncedTerm("");
-                    }}
-                    className="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 border-b border-gray-100 dark:border-slate-700/50 last:border-0 transition-colors"
-                  >
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {lead.customerName}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                      {lead.phoneNumber} • {lead.address || "No address"}
-                    </p>
-                  </li>
-                ))
-              ) : (
-                <li className="px-4 py-3 text-sm text-gray-500 dark:text-slate-500 text-center">
-                  {isLoading ? "Loading leads..." : "No leads found."}
-                </li>
-              )}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   );
 };

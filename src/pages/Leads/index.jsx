@@ -22,6 +22,8 @@ import {
   ReceiptIcon,
 } from "@phosphor-icons/react";
 import { MobileCardSkeleton } from "../../components/ui/Skeletons";
+import Pagination from "../../components/ui/Pagination";
+import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
 
 /* ─── Status config ─── */
 const STATUS_CONFIG = {
@@ -299,7 +301,19 @@ const Leads = () => {
                   </div>
 
                   <div className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                    {lead.assignedTo?.name || (
+                    {lead.assignedTo?.name ? (
+                      <div>
+                        {lead.assignedTo.name}
+                        {lead.assignedTo.department && (
+                          <>
+                            <br />
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {lead.assignedTo.department?.name || lead.assignedTo.department}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    ) : (
                       <span className="text-gray-400 italic text-xs">
                         Unassigned
                       </span>
@@ -379,36 +393,6 @@ const Leads = () => {
             })
           )}
         </div>
-        {/* 👇 REPLACE YOUR PREV/NEXT BUTTONS WITH THIS STYLED FOOTER */}
-        {meta?.totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Showing <span className="font-semibold text-gray-900 dark:text-white">{(meta.currentPage - 1) * meta.itemsPerPage + 1}</span> to <span className="font-semibold text-gray-900 dark:text-white">{Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}</span> of <span className="font-semibold text-gray-900 dark:text-white">{meta.totalItems}</span> leads
-            </span>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(meta.currentPage - 1)}
-                disabled={meta.currentPage === 1 || isLoading}
-                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              
-              <span className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Page {meta.currentPage} of {meta.totalPages}
-              </span>
-              
-              <button
-                onClick={() => handlePageChange(meta.currentPage + 1)}
-                disabled={meta.currentPage === meta.totalPages || isLoading}
-                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Mobile Cards ── */}
@@ -502,6 +486,13 @@ const Leads = () => {
           })
         )}
       </div>
+      
+      <Pagination 
+        meta={meta} 
+        isLoading={isLoading} 
+        onPageChange={handlePageChange} 
+        itemName="leads" 
+      />
 
       {/* ── MODALS (Unchanged) ── */}
       {/* ── MODALS ── */}
@@ -810,28 +801,31 @@ const AssignSelect = ({
   staffUsers,
   label = "Assign To",
 }) => (
-  <div className={!isAdmin ? "opacity-50" : ""}>
-    <label className={labelCls}>
-      {label}{" "}
-      {!isAdmin && (
-        <span className="normal-case font-normal text-gray-400">
-          (Admin only)
-        </span>
-      )}
-    </label>
-    <select
-      value={value}
+  <div className={!isAdmin ? "opacity-60 pointer-events-none" : ""}>
+    <SearchAutocomplete
+      items={staffUsers}
+      selectedId={value}
+      onSelect={onChange}
+      label={`${label} ${!isAdmin ? "(Admin only)" : ""}`}
+      placeholder={isAdmin ? "Search staff by name..." : "You cannot assign staff"}
+      selectedTheme="neutral"
       disabled={!isAdmin}
-      onChange={(e) => onChange(e.target.value)}
-      className={`${inputCls} ${!isAdmin ? "cursor-not-allowed" : ""}`}
-    >
-      <option value="">— Unassigned —</option>
-      {staffUsers.map((u) => (
-        <option key={u.id} value={u.id}>
-          {u.name} ({u.role})
-        </option>
-      ))}
-    </select>
+      renderItem={(staff, isSelected) =>
+        isSelected ? (
+          `${staff.name} (${staff.department || staff.role})`
+        ) : (
+          <div className="flex flex-col">
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {staff.name}
+            </span>
+            <span className="text-xs text-gray-500">{staff.department || staff.role}</span>
+          </div>
+        )
+      }
+      searchFilter={(staff, term) =>
+        (staff.name || "").toLowerCase().includes(term.toLowerCase())
+      }
+    />
   </div>
 );
 
