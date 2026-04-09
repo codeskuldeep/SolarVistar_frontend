@@ -5,13 +5,16 @@ import { Wrench, CheckCircle, MapPin, Clock } from '@phosphor-icons/react';
 
 export default function InstallationDashboard() {
   const dispatch = useDispatch();
-  const { visits, hasFetched, isLoading } = useSelector((state) => state.visits);
+  const { visits, hasFetched, isLoading, lastFetchedAt } = useSelector((state) => state.visits);
+
+  const STALE_MS = 2 * 60 * 1000;
 
   useEffect(() => {
-    if (!hasFetched && !isLoading) {
-      dispatch(fetchVisits());
+    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
+    if (isStale) {
+      dispatch(fetchVisits({ page: 1, limit: 50 }));
     }
-  }, [dispatch, hasFetched, isLoading]);
+  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // KPI Calculations
   const pendingJobs = visits?.filter((visit) => visit.status === 'PENDING').length || 0;

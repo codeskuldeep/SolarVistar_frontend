@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchVisits,
@@ -15,6 +15,8 @@ import {
   UserIcon,
   PhoneIcon,
   CheckSquareOffsetIcon,
+  MagnifyingGlassIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { TableSkeleton } from "../../components/ui/Skeletons";
 import Pagination from "../../components/ui/Pagination";
@@ -69,11 +71,13 @@ const QuickLeadModal = ({ onClose, onCreated }) => {
 const Visits = () => {
   const dispatch = useDispatch();
 
-  const { visits, isLoading, error, successMessage, hasFetched: visitsFetched, meta } =
+  const { visits, isLoading, error, successMessage, hasFetched: visitsFetched, meta, lastFetchedAt } =
     useSelector((state) => state.visits);
-  const { users, hasFetched: usersFetched } = useSelector((state) => state.users);
-  const { leads, hasFetched: leadsFetched } = useSelector((state) => state.leads);
+  const { users, hasFetched: usersFetched, lastFetchedAt: usersLastFetchedAt } = useSelector((state) => state.users);
+  const { leads, hasFetched: leadsFetched, lastFetchedAt: leadsLastFetchedAt } = useSelector((state) => state.leads);
   const { user: currentUser } = useSelector((state) => state.auth);
+
+  const canAssign = currentUser?.role === "ADMIN" || currentUser?.department?.name === "Sales";
 
   const [activeModal, setActiveModal] = useState(null); // 'CREATE', 'UPDATE'
   const [selectedVisit, setSelectedVisit] = useState(null);
@@ -99,19 +103,37 @@ const Visits = () => {
     assignedStaffId: "",
   });
 
+  const VISITS_PER_PAGE = 10;
+  const STALE_MS = 2 * 60 * 1000;
+
+  // Debounced server-side search
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const prevSearchRef = useRef("");
+
   useEffect(() => {
-    if (!visitsFetched && !isLoading)
-      dispatch(fetchVisits({ page: 1, limit: meta.itemsPerPage })); 
-    if (!usersFetched) dispatch(fetchUsers());
-    if (!leadsFetched) dispatch(fetchLeads());
-  }, [
-    dispatch,
-    visitsFetched,
-    isLoading,
-    usersFetched,
-    leadsFetched,
-    meta.itemsPerPage,
-  ]);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Smart fetch: search always fetches, global list respects TTL
+  useEffect(() => {
+    const isSearching = debouncedSearch.length > 0;
+    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
+    const searchCleared = prevSearchRef.current.length > 0 && debouncedSearch.length === 0;
+
+    if (isSearching || isStale || searchCleared) {
+      dispatch(fetchVisits({ page: 1, limit: VISITS_PER_PAGE, search: debouncedSearch }));
+    }
+    if (canAssign) {
+      const usersStale = !usersLastFetchedAt || Date.now() - usersLastFetchedAt > STALE_MS;
+      if (usersStale) dispatch(fetchUsers({ limit: 100 }));
+    }
+    const leadsStale = !leadsLastFetchedAt || Date.now() - leadsLastFetchedAt > STALE_MS;
+    if (leadsStale) dispatch(fetchLeads({ page: 1, limit: 50 }));
+    
+    prevSearchRef.current = debouncedSearch;
+  }, [dispatch, debouncedSearch, canAssign, lastFetchedAt, usersLastFetchedAt, leadsLastFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (error || successMessage) {
@@ -155,7 +177,7 @@ const Visits = () => {
     e.preventDefault();
     const payload = {
       ...updateData,
-      assignedStaffId: updateData.assignedStaffId || undefined, // Only pass if provided
+      assignedStaffId: updateData.assignedStaffId || null, // Only pass if provided
     };
     const result = await dispatch(
       updateVisitStatus({ id: selectedVisit.id, updateData: payload }),
@@ -176,10 +198,8 @@ const Visits = () => {
   };
 
   const handlePageChange = (newPage) => {
-    // Only fetch if the page is actually valid
     if (newPage >= 1 && newPage <= meta.totalPages) {
-      // Dispatching directly here bypasses the `hasFetched` block!
-      dispatch(fetchVisits({ page: newPage, limit: meta.itemsPerPage }));
+      dispatch(fetchVisits({ page: newPage, limit: VISITS_PER_PAGE, search: debouncedSearch }));
     }
   };
 
@@ -222,6 +242,26 @@ const Visits = () => {
           <CalendarPlusIcon weight="bold" size={18} />
           Schedule Visit
         </button>
+      </div>
+
+      {/* ── Search Bar ── */}
+      <div className="relative max-w-xs">
+        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" weight="bold" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search by name, phone, or address..."
+          className="w-full pl-9 pr-9 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors shadow-sm"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <XIcon size={14} />
+          </button>
+        )}
       </div>
 
       {/* Data Table */}
@@ -487,9 +527,9 @@ const Visits = () => {
                       selectedId={createData.assignedStaffId}
                       onSelect={(id) => setCreateData((prev) => ({ ...prev, assignedStaffId: id }))}
                       label="Assign Staff"
-                      placeholder={currentUser?.role === "ADMIN" ? "Search staff by name..." : "You cannot assign staff"}
+                      placeholder={canAssign ? "Search staff by name..." : "You cannot assign staff"}
                       selectedTheme="neutral"
-                      disabled={currentUser?.role !== "ADMIN"}
+                      disabled={!canAssign}
                       renderItem={(staff, isSelected) =>
                         isSelected ? (
                           `${staff.name} (${staff.department || staff.role})`
@@ -540,34 +580,33 @@ const Visits = () => {
                     </div>
                     <div
                       className={
-                        currentUser?.role !== "ADMIN" ? "tooltip-wrapper" : ""
+                        !canAssign ? "tooltip-wrapper" : ""
                       }
                     >
-                      {currentUser?.role !== "ADMIN" && (
+                      {!canAssign && (
                         <span className="tooltip-text">
                           Can't access: Reassign Visit
                         </span>
                       )}
                       <label
-                        className={`block text-sm font-medium mb-1 ${currentUser?.role === "ADMIN" ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-600"}`}
+                        className={`block text-sm font-medium mb-1 ${canAssign ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-600"}`}
                       >
                         Reassign Staff{" "}
-                        {currentUser?.role !== "ADMIN" && "(Admin Only)"}
+                        {!canAssign && "(Restricted)"}
                       </label>
                       <select
                         value={updateData.assignedStaffId}
-                        disabled={currentUser?.role !== "ADMIN"}
+                        disabled={!canAssign}
                         onChange={(e) =>
                           setUpdateData({
                             ...updateData,
                             assignedStaffId: e.target.value,
                           })
                         }
-                        className={`w-full px-3 py-2 border rounded-md sm:text-sm ${
-                          currentUser?.role === "ADMIN"
+                        className={`w-full px-3 py-2 border rounded-md sm:text-sm ${canAssign
                             ? "border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-white focus:ring-1 focus:ring-blue-500"
                             : "border-gray-200 dark:border-dark-border bg-gray-100 dark:bg-dark-bg/50 text-gray-400 dark:text-gray-600 cursor-not-allowed"
-                        }`}
+                          }`}
                       >
                         <option value="">-- Unassigned --</option>
                         {staffUsers.map((u) => (
@@ -693,7 +732,7 @@ const Visits = () => {
           </div>
         </div>
       )}
-      
+
       {showQuickLead && (
         <QuickLeadModal
           onClose={() => setShowQuickLead(false)}
@@ -704,11 +743,11 @@ const Visits = () => {
           }}
         />
       )}
-      <Pagination 
-        meta={meta} 
-        isLoading={isLoading} 
-        onPageChange={handlePageChange} 
-        itemName="visits" 
+      <Pagination
+        meta={meta}
+        isLoading={isLoading}
+        onPageChange={handlePageChange}
+        itemName="visits"
       />
     </div>
   );

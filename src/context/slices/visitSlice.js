@@ -4,9 +4,11 @@ import api from "../../services/api";
 // 1. Fetch Visits
 export const fetchVisits = createAsyncThunk(
   "visits/fetchVisits",
-  async ({ page = 1, limit = 10 }, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, search = "" } = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get("/visits", { params: { page, limit } });
+      const response = await api.get("/visits", {
+        params: { page, limit, search: search || undefined },
+      });
       return {
         visits: response.data.data.visits,
         meta: response.data.data.meta,
@@ -55,6 +57,7 @@ const initialState = {
   error: null,
   successMessage: null,
   hasFetched: false,
+  lastFetchedAt: null, // TTL cache timestamp
   meta: {
     currentPage: 1,
     totalPages: 1,
@@ -77,6 +80,7 @@ const visitSlice = createSlice({
       state.error = null;
       state.successMessage = null;
       state.hasFetched = false;
+      state.lastFetchedAt = null;
     },
   },
   extraReducers: (builder) => {
@@ -91,12 +95,17 @@ const visitSlice = createSlice({
         state.meta = action.payload.meta;
         state.visits = action.payload.visits;
         state.hasFetched = true;
+        // Rule B: Only stamp cache for the global (unfiltered) list
+        if (!action.meta.arg?.search) {
+          state.lastFetchedAt = Date.now();
+        }
       })
       .addCase(fetchVisits.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.hasFetched = true; // Circuit breaker
       })
-      // Create Visit
+      // Create Visit — Rules D + A
       .addCase(createVisit.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -104,18 +113,18 @@ const visitSlice = createSlice({
       })
       .addCase(createVisit.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Insert and sort to keep chronological order based on datetime
         state.visits.push(action.payload);
         state.visits.sort(
           (a, b) => new Date(a.visitDatetime) - new Date(b.visitDatetime),
         );
+        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Visit scheduled successfully";
       })
       .addCase(createVisit.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
-      // Update Visit Status
+      // Update Visit Status — Rules D + A
       .addCase(updateVisitStatus.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -127,6 +136,7 @@ const visitSlice = createSlice({
         if (index !== -1) {
           state.visits[index] = { ...state.visits[index], ...action.payload };
         }
+        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Visit updated successfully";
       })
       .addCase(updateVisitStatus.rejected, (state, action) => {

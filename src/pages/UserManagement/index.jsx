@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchUsers,
@@ -13,15 +13,19 @@ import {
   UserCircleIcon,
   WarningCircleIcon,
   CheckCircleIcon,
+  MagnifyingGlassIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { TableSkeleton } from "../../components/ui/Skeletons";
 import Pagination from "../../components/ui/Pagination";
 
+const USERS_PER_PAGE = 10;
+const STALE_MS = 2 * 60 * 1000;
+
 const Users = () => {
   const dispatch = useDispatch();
 
-  // Pulling exact state from your updated userSlice
-  const { users, isLoading, error, successMessage, hasFetched, meta } =
+  const { users, isLoading, error, successMessage, hasFetched, meta, lastFetchedAt } =
     useSelector((state) => state.users);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,20 +37,32 @@ const Users = () => {
     department: "",
   });
 
-  useEffect(() => {
-    console.log("Checking Cache. Has fetched yet?", hasFetched); // Add this log to prove it works!
+  // Debounced server-side search
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const prevSearchRef = useRef("");
 
-    // Only fetch if Redux says we haven't asked the server yet
-    if (!hasFetched && !isLoading) {
-      dispatch(fetchUsers({limit: meta.itemsPerPage }));
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Smart fetch: search always fetches, global list respects TTL
+  useEffect(() => {
+    const isSearching = debouncedSearch.length > 0;
+    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
+    const searchCleared = prevSearchRef.current.length > 0 && debouncedSearch.length === 0;
+
+    if (isSearching || isStale || searchCleared) {
+      dispatch(fetchUsers({ page: 1, limit: USERS_PER_PAGE, search: debouncedSearch }));
     }
-  }, [dispatch, isLoading , hasFetched, meta.itemsPerPage]);
+    
+    prevSearchRef.current = debouncedSearch;
+  }, [dispatch, debouncedSearch, lastFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePageChange = (newPage) => {
-    // Only fetch if the page is actually valid
     if (newPage >= 1 && newPage <= meta.totalPages) {
-      // Dispatching directly here bypasses the `hasFetched` block!
-      dispatch(fetchUsers({ page: newPage, limit: meta.itemsPerPage }));
+      dispatch(fetchUsers({ page: newPage, limit: USERS_PER_PAGE, search: debouncedSearch }));
     }
   };
 
@@ -142,6 +158,26 @@ const Users = () => {
           <PlusIcon weight="bold" />
           Add User
         </button>
+      </div>
+
+      {/* ── Search Bar ── */}
+      <div className="relative max-w-xs">
+        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" weight="bold" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search by name or email..."
+          className="w-full pl-9 pr-9 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors shadow-sm"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <XIcon size={14} />
+          </button>
+        )}
       </div>
 
       {/* Data Table */}

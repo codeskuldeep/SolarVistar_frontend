@@ -1,13 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../services/api"; // Adjust path if needed
+import api from "../../services/api";
 
 // 1. Fetch Leads
 export const fetchLeads = createAsyncThunk(
   "leads/fetchLeads",
-  async ({ page = 1, limit = 10 }, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, search = "" } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get("/leads", {
-        params: { page, limit },
+        params: { page, limit, search: search || undefined },
       });
 
       return {
@@ -22,14 +22,11 @@ export const fetchLeads = createAsyncThunk(
   },
 );
 
-// In slices/leadSlice.js
-
 // Fetch ONLY converted customers
 export const fetchExistingCustomers = createAsyncThunk(
   "leads/fetchExistingCustomers",
   async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
     try {
-      // 🔥 Notice the ?status=CONVERTED in the URL
       const response = await api.get("/leads", {
         params: { page, limit, status: "CONVERTED" },
       });
@@ -95,7 +92,7 @@ export const addFollowUp = createAsyncThunk(
 
 const initialState = {
   leads: [],
-  existingCustomersList: [], // 👈 1. MUST ADD THIS ARRAY
+  existingCustomersList: [],
   meta: {
     totalItems: 0,
     currentPage: 1,
@@ -106,7 +103,8 @@ const initialState = {
   error: null,
   successMessage: null,
   hasFetched: false,
-  hasFetchedCustomers: false, // 👈 2. Tracks the customers page
+  hasFetchedCustomers: false,
+  lastFetchedAt: null, // TTL cache timestamp
 };
 
 const leadSlice = createSlice({
@@ -123,6 +121,7 @@ const leadSlice = createSlice({
       state.error = null;
       state.successMessage = null;
       state.hasFetched = false;
+      state.lastFetchedAt = null;
     },
   },
   extraReducers: (builder) => {
@@ -137,12 +136,17 @@ const leadSlice = createSlice({
         state.leads = action.payload.leads;
         state.meta = action.payload.meta;
         state.hasFetched = true;
+        // Rule B: Only stamp cache for the global (unfiltered) list
+        if (!action.meta.arg?.search) {
+          state.lastFetchedAt = Date.now();
+        }
       })
       .addCase(fetchLeads.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.hasFetched = true; // Circuit breaker
       })
-      // Create Lead
+      // Create Lead — Rules D + A
       .addCase(createLead.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -150,14 +154,15 @@ const leadSlice = createSlice({
       })
       .addCase(createLead.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.leads.unshift(action.payload); // Add to top of list
+        state.leads.unshift(action.payload); // Rule D: instant UI
+        state.lastFetchedAt = null;          // Rule A: invalidate cache
         state.successMessage = "Lead created successfully";
       })
       .addCase(createLead.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
-      // Update Status
+      // Update Status — Rules D + A
       .addCase(updateLeadStatus.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -165,14 +170,10 @@ const leadSlice = createSlice({
       })
       .addCase(updateLeadStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-
-        // 🔥 If the user just changed the status to CONVERTED, instantly remove it from the Leads table!
         if (action.payload.status === "CONVERTED") {
           state.leads = state.leads.filter((l) => l.id !== action.payload.id);
-          // (Optional) Reset customer fetch flag so the Customers page refetches next time it opens
           state.hasFetchedCustomers = false;
         } else {
-          // Otherwise, just update the row normally
           const index = state.leads.findIndex(
             (l) => l.id === action.payload.id,
           );
@@ -180,13 +181,14 @@ const leadSlice = createSlice({
             state.leads[index] = { ...state.leads[index], ...action.payload };
           }
         }
+        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Lead updated successfully";
       })
       .addCase(updateLeadStatus.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
-      // Add Follow-up
+      // Add Follow-up — Rules D + A
       .addCase(addFollowUp.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -197,9 +199,9 @@ const leadSlice = createSlice({
         const { leadId, followUp } = action.payload;
         const lead = state.leads.find((l) => l.id === leadId);
         if (lead) {
-          // Replace the single visible follow-up with the new one
           lead.followUps = [followUp];
         }
+        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Follow-up logged successfully";
       })
       .addCase(addFollowUp.rejected, (state, action) => {
@@ -212,7 +214,6 @@ const leadSlice = createSlice({
       })
       .addCase(fetchExistingCustomers.fulfilled, (state, action) => {
         state.isLoading = false;
-        // 👈 3. Save the payload to the new array!
         state.existingCustomersList = action.payload.customers;
         state.meta = action.payload.meta;
         state.hasFetchedCustomers = true;

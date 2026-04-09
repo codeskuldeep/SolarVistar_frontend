@@ -1,13 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../services/api"; // Adjust path to where your axios instance is
+import api from "../../services/api";
 
-// Fetch all users (Requires a GET /api/users route in your backend)
+// Fetch all users
 export const fetchUsers = createAsyncThunk(
   "users/fetchUsers",
-  async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, search = "" } = {}, { rejectWithValue }) => {
     try {
       const response = await api.get("/users", {
-        params: { page, limit },
+        params: { page, limit, search: search || undefined },
       });
 
       return {
@@ -21,6 +21,7 @@ export const fetchUsers = createAsyncThunk(
     }
   },
 );
+
 // Create a new user
 export const createUser = createAsyncThunk(
   "users/createUser",
@@ -42,7 +43,7 @@ export const deleteUser = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       await api.delete(`/users/${id}`);
-      return id; // Return the ID so we can filter it out of the state
+      return id;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to delete user",
@@ -57,6 +58,7 @@ const initialState = {
   error: null,
   hasFetched: false,
   successMessage: null,
+  lastFetchedAt: null, // TTL cache timestamp
   meta: {
     totalItems: 0,
     currentPage: 1,
@@ -79,6 +81,7 @@ const userSlice = createSlice({
       state.hasFetched = false;
       state.error = null;
       state.successMessage = null;
+      state.lastFetchedAt = null;
     },
   },
   extraReducers: (builder) => {
@@ -91,14 +94,19 @@ const userSlice = createSlice({
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.isLoading = false;
         state.users = action.payload.users;
-        state.meta = action.payload.meta; // 👈 3. STORE META
+        state.meta = action.payload.meta;
         state.hasFetched = true;
+        // Rule B: Only stamp cache for the global (unfiltered) list
+        if (!action.meta.arg?.search) {
+          state.lastFetchedAt = Date.now();
+        }
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.hasFetched = true; // Circuit breaker
       })
-      // Create User
+      // Create User — Rules D + A
       .addCase(createUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -106,14 +114,15 @@ const userSlice = createSlice({
       })
       .addCase(createUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.users.push(action.payload);
+        state.users.push(action.payload); // Rule D: instant UI
+        state.lastFetchedAt = null;       // Rule A: invalidate
         state.successMessage = "User created successfully";
       })
       .addCase(createUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
-      // Delete User
+      // Delete User — Rules D + A
       .addCase(deleteUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -121,7 +130,8 @@ const userSlice = createSlice({
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.users = state.users.filter((user) => user.id !== action.payload);
+        state.users = state.users.filter((user) => user.id !== action.payload); // Rule D
+        state.lastFetchedAt = null; // Rule A
         state.successMessage = "User deleted successfully";
       })
       .addCase(deleteUser.rejected, (state, action) => {

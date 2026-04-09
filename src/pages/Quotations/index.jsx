@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Plus,
@@ -127,49 +127,39 @@ export default function QuotationManager() {
    ========================================= */
 const QuotationList = ({ onView }) => {
   const dispatch = useDispatch();
-  const { quotationsList, isLoading, hasFetched, error, meta } = useSelector(
+  const { quotationsList, isLoading, hasFetched, error, meta, lastFetchedAt } = useSelector(
     (state) => state.quotations,
   );
 
+  const QUOTES_PER_PAGE = 10;
+  const STALE_MS = 2 * 60 * 1000;
+
   const [quoteSearch, setQuoteSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const prevSearchRef = useRef("");
 
-  // Debounce logic (unchanged, it's good!)
+  // 400ms debounce
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(quoteSearch), 300);
+    const timer = setTimeout(() => setDebouncedSearch(quoteSearch), 400);
     return () => clearTimeout(timer);
   }, [quoteSearch]);
 
-  // Optimized Filtering
-  const filteredQuotations = useMemo(() => {
-    // Early return if search is empty to save processing
-    if (!debouncedSearch.trim()) return quotationsList;
-
-    // Calculate these ONCE outside the loop
-    const lowerSearch = debouncedSearch.toLowerCase();
-    const numSearch = debouncedSearch.replaceAll(" ", "");
-
-    return quotationsList.filter((q) => {
-      // Safely fallback to empty strings to prevent .includes() crashes
-      const safeName = q.lead?.customerName || "";
-      const safePhone = q.lead?.phoneNumber || "";
-
-      const matchesName = safeName.toLowerCase().includes(lowerSearch);
-      const matchesPhone = safePhone.replaceAll(" ", "").includes(numSearch);
-
-      return matchesName || matchesPhone;
-    });
-  }, [quotationsList, debouncedSearch]); 
-
+  // Smart fetch: search always fetches, global list respects TTL
   useEffect(() => {
-    if (!hasFetched && !isLoading) {
-      dispatch(fetchQuotations({ page: 1, limit: meta.itemsPerPage }));
+    const isSearching = debouncedSearch.length > 0;
+    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
+    const searchCleared = prevSearchRef.current.length > 0 && debouncedSearch.length === 0;
+
+    if (isSearching || isStale || searchCleared) {
+      dispatch(fetchQuotations({ page: 1, limit: QUOTES_PER_PAGE, search: debouncedSearch }));
     }
-  }, [dispatch, hasFetched, isLoading, meta.itemsPerPage]);
+    
+    prevSearchRef.current = debouncedSearch;
+  }, [dispatch, debouncedSearch, lastFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= meta.totalPages) {
-      dispatch(fetchQuotations({ page: newPage, limit: meta.itemsPerPage }));
+      dispatch(fetchQuotations({ page: newPage, limit: QUOTES_PER_PAGE, search: debouncedSearch }));
     }
   };
 
@@ -226,7 +216,7 @@ const QuotationList = ({ onView }) => {
                 </td>
               </tr>
             ) : (
-              filteredQuotations.map((q) => (
+              quotationsList.map((q) => (
                 <tr
                   key={q.id}
                   className="hover:bg-emerald-50/50 dark:hover:bg-slate-800/50 transition-colors"
@@ -291,7 +281,7 @@ const QuotationList = ({ onView }) => {
             No quotations found. Create one to get started.
           </div>
         ) : (
-          filteredQuotations.map((q) => (
+          quotationsList.map((q) => (
             <div
               key={q.id}
               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden"
