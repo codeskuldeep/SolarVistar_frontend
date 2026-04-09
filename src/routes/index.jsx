@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import Login from "../pages/login"; // Adjust path if needed
+import Login from "../pages/Login"; // Adjust path if needed
 import ProtectedRoute from "./ProtectedRoutes";
 import DashboardLayout from "../components/layout/DashboardLayout"; // 👈 Import Layout
 import UserManagement from "../pages/UserManagement"; // Placeholder for future user management page

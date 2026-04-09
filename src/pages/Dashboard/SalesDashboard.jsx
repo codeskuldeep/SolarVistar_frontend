@@ -5,13 +5,16 @@ import { Target, TrendUp, PhoneCall, EnvelopeSimple, WhatsappLogo } from '@phosp
 
 export default function SalesDashboard() {
   const dispatch = useDispatch();
-  const { leads, hasFetched: leadsFetched, isLoading } = useSelector((state) => state.leads);
+  const { leads, hasFetched: leadsFetched, isLoading, lastFetchedAt } = useSelector((state) => state.leads);
+
+  const STALE_MS = 2 * 60 * 1000;
 
   useEffect(() => {
-    if (!leadsFetched && !isLoading) {
-      dispatch(fetchLeads());
+    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
+    if (isStale) {
+      dispatch(fetchLeads({ page: 1, limit: 50 }));
     }
-  }, [dispatch, leadsFetched, isLoading]);
+  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // KPI Calculations
   const totalLeads = leads?.length || 0;
