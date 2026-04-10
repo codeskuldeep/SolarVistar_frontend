@@ -127,12 +127,11 @@ export default function QuotationManager() {
    ========================================= */
 const QuotationList = ({ onView }) => {
   const dispatch = useDispatch();
-  const { quotationsList, isLoading, hasFetched, error, meta, lastFetchedAt } = useSelector(
+  const { quotationsList, isLoading, error, meta } = useSelector(
     (state) => state.quotations,
   );
 
   const QUOTES_PER_PAGE = 10;
-  const STALE_MS = 2 * 60 * 1000;
 
   const [quoteSearch, setQuoteSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -144,18 +143,14 @@ const QuotationList = ({ onView }) => {
     return () => clearTimeout(timer);
   }, [quoteSearch]);
 
-  // Smart fetch: search always fetches, global list respects TTL
+  // Fetch logic
   useEffect(() => {
-    const isSearching = debouncedSearch.length > 0;
-    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
-    const searchCleared = prevSearchRef.current.length > 0 && debouncedSearch.length === 0;
-
-    if (isSearching || isStale || searchCleared) {
+    if (!isLoading) {
       dispatch(fetchQuotations({ page: 1, limit: QUOTES_PER_PAGE, search: debouncedSearch }));
     }
     
     prevSearchRef.current = debouncedSearch;
-  }, [dispatch, debouncedSearch, lastFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dispatch, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= meta.totalPages) {
@@ -165,7 +160,7 @@ const QuotationList = ({ onView }) => {
 
 
 
-  if (error && !isLoading && !hasFetched) {
+  if (error && !isLoading) {
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-md">
         Error: {error}
@@ -351,13 +346,13 @@ const QuotationForm = ({
 }) => {
   const dispatch = useDispatch();
   const { isSaving, error } = useSelector((state) => state.quotations);
-  const { leads, hasFetched: leadsFetched, isLoading: leadsLoading } = useSelector((state) => state.leads);
+  const { leads, isLoading: leadsLoading } = useSelector((state) => state.leads);
 
   useEffect(() => {
-    if (!leadsFetched && !leadsLoading) {
+    if (!leadsLoading) {
       dispatch(fetchLeads({ page: 1, limit: 1000 }));
     }
-  }, [leadsFetched, leadsLoading, dispatch]);
+  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [formData, setFormData] = useState({
     leadId: initialLeadId || "",

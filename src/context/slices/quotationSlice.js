@@ -102,8 +102,6 @@ const quotationSlice = createSlice({
     isLoading: false,
     isFetchingDetails: false,
     isSaving: false,
-    hasFetched: false,
-    lastFetchedAt: null, // TTL cache timestamp
     error: null,
   },
   reducers: {
@@ -119,8 +117,6 @@ const quotationSlice = createSlice({
       state.isLoading = false;
       state.isFetchingDetails = false;
       state.isSaving = false;
-      state.hasFetched = false;
-      state.lastFetchedAt = null;
       state.error = null;
     },
   },
@@ -135,16 +131,10 @@ const quotationSlice = createSlice({
         state.isLoading = false;
         state.quotationsList = action.payload.quotations;
         state.meta = action.payload.meta;
-        state.hasFetched = true;
-        // Rule B: Only stamp cache for the global (unfiltered) list
-        if (!action.meta.arg?.search) {
-          state.lastFetchedAt = Date.now();
-        }
       })
       .addCase(fetchQuotations.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        state.hasFetched = true; // Circuit breaker
       })
 
       // Fetch Single Quotation
@@ -169,7 +159,6 @@ const quotationSlice = createSlice({
       .addCase(createQuotation.fulfilled, (state, action) => {
         state.isSaving = false;
         state.quotationsList.unshift(action.payload); // Rule D
-        state.lastFetchedAt = null;                   // Rule A
       })
       .addCase(createQuotation.rejected, (state, action) => {
         state.isSaving = false;
@@ -190,7 +179,6 @@ const quotationSlice = createSlice({
         ) {
           state.currentQuotation = action.payload;
         }
-        state.lastFetchedAt = null; // Rule A
       })
 
       // Delete Quotation — Rules D + A
@@ -204,7 +192,6 @@ const quotationSlice = createSlice({
         ) {
           state.currentQuotation = null;
         }
-        state.lastFetchedAt = null; // Rule A
       });
   },
 });

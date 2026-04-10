@@ -93,15 +93,12 @@ const Leads = () => {
   });
 
   // Pull the flags from both slices
-  const { hasFetched: hasFetchedLeads, meta, lastFetchedAt } = useSelector(
-    (state) => state.leads,
-  );
-  const { hasFetched: hasFetchedUsers, lastFetchedAt: usersLastFetchedAt } = useSelector((state) => state.users);
+  const { meta } = useSelector((state) => state.leads);
+  const { isLoading: isUsersLoading } = useSelector((state) => state.users);
   const isAdmin = currentUser?.role === "ADMIN";
   const canAssign = isAdmin || currentUser?.department?.name === "Sales";
 
   const LEADS_PER_PAGE = 10;
-  const STALE_MS = 2 * 60 * 1000; // 2 minutes
 
   // Debounced server-side search
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,22 +110,17 @@ const Leads = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Smart fetch: search always fetches, global list respects TTL
+  // Fetch logic
   useEffect(() => {
-    const isSearching = debouncedSearch.length > 0;
-    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
-    const searchCleared = prevSearchRef.current.length > 0 && debouncedSearch.length === 0;
-
-    if (isSearching || isStale || searchCleared) {
+    if (!isLoading) {
       dispatch(fetchLeads({ page: 1, limit: LEADS_PER_PAGE, search: debouncedSearch }));
     }
-    if (canAssign) {
-      const usersStale = !usersLastFetchedAt || Date.now() - usersLastFetchedAt > STALE_MS;
-      if (usersStale) dispatch(fetchUsers({ limit: 100 }));
+    if (canAssign && !isUsersLoading) {
+      dispatch(fetchUsers({ limit: 100 }));
     }
     
     prevSearchRef.current = debouncedSearch;
-  }, [dispatch, debouncedSearch, canAssign, lastFetchedAt, usersLastFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dispatch, debouncedSearch, canAssign]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pagination handler — carries current search forward
   const handlePageChange = (newPage) => {

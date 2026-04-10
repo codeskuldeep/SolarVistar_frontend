@@ -102,9 +102,6 @@ const initialState = {
   isLoading: false,
   error: null,
   successMessage: null,
-  hasFetched: false,
-  hasFetchedCustomers: false,
-  lastFetchedAt: null, // TTL cache timestamp
 };
 
 const leadSlice = createSlice({
@@ -120,8 +117,6 @@ const leadSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.successMessage = null;
-      state.hasFetched = false;
-      state.lastFetchedAt = null;
     },
   },
   extraReducers: (builder) => {
@@ -135,16 +130,10 @@ const leadSlice = createSlice({
         state.isLoading = false;
         state.leads = action.payload.leads;
         state.meta = action.payload.meta;
-        state.hasFetched = true;
-        // Rule B: Only stamp cache for the global (unfiltered) list
-        if (!action.meta.arg?.search) {
-          state.lastFetchedAt = Date.now();
-        }
       })
       .addCase(fetchLeads.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        state.hasFetched = true; // Circuit breaker
       })
       // Create Lead — Rules D + A
       .addCase(createLead.pending, (state) => {
@@ -155,7 +144,6 @@ const leadSlice = createSlice({
       .addCase(createLead.fulfilled, (state, action) => {
         state.isLoading = false;
         state.leads.unshift(action.payload); // Rule D: instant UI
-        state.lastFetchedAt = null;          // Rule A: invalidate cache
         state.successMessage = "Lead created successfully";
       })
       .addCase(createLead.rejected, (state, action) => {
@@ -172,7 +160,6 @@ const leadSlice = createSlice({
         state.isLoading = false;
         if (action.payload.status === "CONVERTED") {
           state.leads = state.leads.filter((l) => l.id !== action.payload.id);
-          state.hasFetchedCustomers = false;
         } else {
           const index = state.leads.findIndex(
             (l) => l.id === action.payload.id,
@@ -181,7 +168,6 @@ const leadSlice = createSlice({
             state.leads[index] = { ...state.leads[index], ...action.payload };
           }
         }
-        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Lead updated successfully";
       })
       .addCase(updateLeadStatus.rejected, (state, action) => {
@@ -201,7 +187,6 @@ const leadSlice = createSlice({
         if (lead) {
           lead.followUps = [followUp];
         }
-        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Follow-up logged successfully";
       })
       .addCase(addFollowUp.rejected, (state, action) => {
@@ -216,7 +201,6 @@ const leadSlice = createSlice({
         state.isLoading = false;
         state.existingCustomersList = action.payload.customers;
         state.meta = action.payload.meta;
-        state.hasFetchedCustomers = true;
       })
       .addCase(fetchExistingCustomers.rejected, (state, action) => {
         state.isLoading = false;

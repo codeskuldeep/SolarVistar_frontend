@@ -5,13 +5,10 @@ import { Wrench, CheckCircle, MapPin, Clock } from '@phosphor-icons/react';
 
 export default function InstallationDashboard() {
   const dispatch = useDispatch();
-  const { visits, hasFetched, isLoading, lastFetchedAt } = useSelector((state) => state.visits);
-
-  const STALE_MS = 2 * 60 * 1000;
+  const { visits, isLoading } = useSelector((state) => state.visits);
 
   useEffect(() => {
-    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
-    if (isStale) {
+    if (!isLoading) {
       dispatch(fetchVisits({ page: 1, limit: 50 }));
     }
   }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
