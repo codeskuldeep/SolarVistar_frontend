@@ -56,8 +56,6 @@ const initialState = {
   isLoading: false,
   error: null,
   successMessage: null,
-  hasFetched: false,
-  lastFetchedAt: null, // TTL cache timestamp
   meta: {
     currentPage: 1,
     totalPages: 1,
@@ -79,8 +77,6 @@ const visitSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.successMessage = null;
-      state.hasFetched = false;
-      state.lastFetchedAt = null;
     },
   },
   extraReducers: (builder) => {
@@ -94,16 +90,10 @@ const visitSlice = createSlice({
         state.isLoading = false;
         state.meta = action.payload.meta;
         state.visits = action.payload.visits;
-        state.hasFetched = true;
-        // Rule B: Only stamp cache for the global (unfiltered) list
-        if (!action.meta.arg?.search) {
-          state.lastFetchedAt = Date.now();
-        }
       })
       .addCase(fetchVisits.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        state.hasFetched = true; // Circuit breaker
       })
       // Create Visit — Rules D + A
       .addCase(createVisit.pending, (state) => {
@@ -117,7 +107,6 @@ const visitSlice = createSlice({
         state.visits.sort(
           (a, b) => new Date(a.visitDatetime) - new Date(b.visitDatetime),
         );
-        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Visit scheduled successfully";
       })
       .addCase(createVisit.rejected, (state, action) => {
@@ -136,7 +125,6 @@ const visitSlice = createSlice({
         if (index !== -1) {
           state.visits[index] = { ...state.visits[index], ...action.payload };
         }
-        state.lastFetchedAt = null; // Rule A
         state.successMessage = "Visit updated successfully";
       })
       .addCase(updateVisitStatus.rejected, (state, action) => {

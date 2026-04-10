@@ -71,10 +71,10 @@ const QuickLeadModal = ({ onClose, onCreated }) => {
 const Visits = () => {
   const dispatch = useDispatch();
 
-  const { visits, isLoading, error, successMessage, hasFetched: visitsFetched, meta, lastFetchedAt } =
+  const { visits, isLoading, error, successMessage, meta } =
     useSelector((state) => state.visits);
-  const { users, hasFetched: usersFetched, lastFetchedAt: usersLastFetchedAt } = useSelector((state) => state.users);
-  const { leads, hasFetched: leadsFetched, lastFetchedAt: leadsLastFetchedAt } = useSelector((state) => state.leads);
+  const { users, isLoading: usersLoading } = useSelector((state) => state.users);
+  const { leads, isLoading: leadsLoading } = useSelector((state) => state.leads);
   const { user: currentUser } = useSelector((state) => state.auth);
 
   const canAssign = currentUser?.role === "ADMIN" || currentUser?.department?.name === "Sales";
@@ -104,7 +104,6 @@ const Visits = () => {
   });
 
   const VISITS_PER_PAGE = 10;
-  const STALE_MS = 2 * 60 * 1000;
 
   // Debounced server-side search
   const [searchTerm, setSearchTerm] = useState("");
@@ -116,24 +115,20 @@ const Visits = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Smart fetch: search always fetches, global list respects TTL
+  // Fetch logic
   useEffect(() => {
-    const isSearching = debouncedSearch.length > 0;
-    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
-    const searchCleared = prevSearchRef.current.length > 0 && debouncedSearch.length === 0;
-
-    if (isSearching || isStale || searchCleared) {
+    if (!isLoading) {
       dispatch(fetchVisits({ page: 1, limit: VISITS_PER_PAGE, search: debouncedSearch }));
     }
-    if (canAssign) {
-      const usersStale = !usersLastFetchedAt || Date.now() - usersLastFetchedAt > STALE_MS;
-      if (usersStale) dispatch(fetchUsers({ limit: 100 }));
+    if (canAssign && !usersLoading) {
+      dispatch(fetchUsers({ limit: 100 }));
     }
-    const leadsStale = !leadsLastFetchedAt || Date.now() - leadsLastFetchedAt > STALE_MS;
-    if (leadsStale) dispatch(fetchLeads({ page: 1, limit: 50 }));
+    if (!leadsLoading) {
+      dispatch(fetchLeads({ page: 1, limit: 50 }));
+    }
     
     prevSearchRef.current = debouncedSearch;
-  }, [dispatch, debouncedSearch, canAssign, lastFetchedAt, usersLastFetchedAt, leadsLastFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dispatch, debouncedSearch, canAssign]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (error || successMessage) {

@@ -20,12 +20,11 @@ import { TableSkeleton } from "../../components/ui/Skeletons";
 import Pagination from "../../components/ui/Pagination";
 
 const USERS_PER_PAGE = 10;
-const STALE_MS = 2 * 60 * 1000;
 
 const Users = () => {
   const dispatch = useDispatch();
 
-  const { users, isLoading, error, successMessage, hasFetched, meta, lastFetchedAt } =
+  const { users, isLoading, error, successMessage, meta } =
     useSelector((state) => state.users);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,18 +46,14 @@ const Users = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Smart fetch: search always fetches, global list respects TTL
+  // Fetch logic
   useEffect(() => {
-    const isSearching = debouncedSearch.length > 0;
-    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
-    const searchCleared = prevSearchRef.current.length > 0 && debouncedSearch.length === 0;
-
-    if (isSearching || isStale || searchCleared) {
+    if (!isLoading) {
       dispatch(fetchUsers({ page: 1, limit: USERS_PER_PAGE, search: debouncedSearch }));
     }
     
     prevSearchRef.current = debouncedSearch;
-  }, [dispatch, debouncedSearch, lastFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dispatch, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= meta.totalPages) {

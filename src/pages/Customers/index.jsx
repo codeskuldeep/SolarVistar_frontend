@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchExistingCustomers } from "../../context/slices/leadSlice";
 import { CheckCircle, FileText } from "lucide-react";
+import Pagination from "../../components/ui/Pagination";
 
 export default function ExistingCustomers() {
   const dispatch = useDispatch();
@@ -93,6 +94,12 @@ export default function ExistingCustomers() {
             )}
           </tbody>
         </table>
+        <Pagination
+          meta={meta}
+          isLoading={isLoading}
+          onPageChange={handlePageChange}
+          itemName="quotations"
+        />
 
         {/* Drop in your Pagination Footer here! */}
       </div>

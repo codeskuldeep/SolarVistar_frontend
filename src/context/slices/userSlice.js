@@ -56,9 +56,7 @@ const initialState = {
   users: [],
   isLoading: false,
   error: null,
-  hasFetched: false,
   successMessage: null,
-  lastFetchedAt: null, // TTL cache timestamp
   meta: {
     totalItems: 0,
     currentPage: 1,
@@ -78,10 +76,8 @@ const userSlice = createSlice({
     resetUserState: (state) => {
       state.users = [];
       state.isLoading = false;
-      state.hasFetched = false;
       state.error = null;
       state.successMessage = null;
-      state.lastFetchedAt = null;
     },
   },
   extraReducers: (builder) => {
@@ -95,16 +91,10 @@ const userSlice = createSlice({
         state.isLoading = false;
         state.users = action.payload.users;
         state.meta = action.payload.meta;
-        state.hasFetched = true;
-        // Rule B: Only stamp cache for the global (unfiltered) list
-        if (!action.meta.arg?.search) {
-          state.lastFetchedAt = Date.now();
-        }
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        state.hasFetched = true; // Circuit breaker
       })
       // Create User — Rules D + A
       .addCase(createUser.pending, (state) => {
@@ -115,7 +105,6 @@ const userSlice = createSlice({
       .addCase(createUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.users.push(action.payload); // Rule D: instant UI
-        state.lastFetchedAt = null;       // Rule A: invalidate
         state.successMessage = "User created successfully";
       })
       .addCase(createUser.rejected, (state, action) => {
@@ -131,7 +120,6 @@ const userSlice = createSlice({
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.users = state.users.filter((user) => user.id !== action.payload); // Rule D
-        state.lastFetchedAt = null; // Rule A
         state.successMessage = "User deleted successfully";
       })
       .addCase(deleteUser.rejected, (state, action) => {

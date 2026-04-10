@@ -1,27 +1,4 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
-import {
-  persistStore,
-  persistReducer,
-  FLUSH,
-  REHYDRATE,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
-} from "redux-persist";
-
-// Safe cross-bundler storage wrapper
-const customStorage = {
-  getItem: (key) => {
-    return Promise.resolve(localStorage.getItem(key));
-  },
-  setItem: (key, item) => {
-    return Promise.resolve(localStorage.setItem(key, item));
-  },
-  removeItem: (key) => {
-    return Promise.resolve(localStorage.removeItem(key));
-  },
-};
 
 import authReducer from "./slices/authSlice";
 import userReducer from "./slices/userSlice";
@@ -30,13 +7,7 @@ import visitReducer from "./slices/visitSlice";
 import toastReducer from "./slices/toastSlice";
 import quotationReducer from "./slices/quotationSlice";
 
-const persistConfig = {
-  key: "crm-root",
-  storage: customStorage,
-  whitelist: ["leads", "visits", "users", "quotations"],
-};
-
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   auth: authReducer,
   toasts: toastReducer,
   users: userReducer,
@@ -45,16 +16,15 @@ const rootReducer = combineReducers({
   quotations: quotationReducer,
 });
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+const rootReducer = (state, action) => {
+  // If the user logs out, we reset the entire state to undefined.
+  // This causes all reducers to return their initialState.
+  if (action.type === "auth/logout/fulfilled") {
+    state = undefined;
+  }
+  return appReducer(state, action);
+};
 
 export const store = configureStore({
-  reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
-    }),
+  reducer: rootReducer,
 });
-
-export const persistor = persistStore(store);

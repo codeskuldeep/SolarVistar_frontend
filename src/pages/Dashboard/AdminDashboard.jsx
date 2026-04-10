@@ -20,33 +20,21 @@ export default function AdminDashboard() {
   const {
     leads,
     isLoading: leadsLoading,
-    hasFetched: leadsFetched,
     meta,
-    lastFetchedAt: leadsLastFetchedAt,
   } = useSelector((state) => state.leads);
   const {
     visits,
     isLoading: visitsLoading,
-    hasFetched: visitsFetched,
     meta: meta1,
-    lastFetchedAt: visitsLastFetchedAt,
   } = useSelector((state) => state.visits);
-  const { users, hasFetched: usersFetched, isLoading: usersLoading, lastFetchedAt: usersLastFetchedAt } = useSelector(
+  const { users, isLoading: usersLoading } = useSelector(
     (state) => state.users,
   );
 
-  const STALE_MS = 2 * 60 * 1000;
-
-  // Smart fetch: respects TTL
   useEffect(() => {
-    const leadsStale = !leadsLastFetchedAt || Date.now() - leadsLastFetchedAt > STALE_MS;
-    if (leadsStale) dispatch(fetchLeads({ page: 1, limit: meta?.itemsPerPage || 10 }));
-
-    const visitsStale = !visitsLastFetchedAt || Date.now() - visitsLastFetchedAt > STALE_MS;
-    if (visitsStale) dispatch(fetchVisits({ page: 1, limit: meta1?.itemsPerPage || 10 }));
-
-    const usersStale = !usersLastFetchedAt || Date.now() - usersLastFetchedAt > STALE_MS;
-    if (usersStale) dispatch(fetchUsers());
+    if (!leadsLoading) dispatch(fetchLeads({ page: 1, limit: meta?.itemsPerPage || 10 }));
+    if (!visitsLoading) dispatch(fetchVisits({ page: 1, limit: meta1?.itemsPerPage || 10 }));
+    if (!usersLoading) dispatch(fetchUsers());
   }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isLoading = usersLoading || leadsLoading || visitsLoading;

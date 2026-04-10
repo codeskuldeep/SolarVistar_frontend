@@ -1,18 +1,20 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
-import { PersistGate } from "redux-persist/integration/react";
-import { store, persistor } from "./context/store";
+import { store } from "./context/store";
 import "./index.css";
 import App from "./App";
 import ToastContainer from "./components/ToastContainer";
 
+// Legacy data cleanup - wipe old persistence
+localStorage.removeItem('persist:root');
+localStorage.removeItem('persist:crm-root');
+localStorage.removeItem('crm-root');
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Provider store={store}>
-    <PersistGate loading={null} persistor={persistor}>
-      <App />
-      <ToastContainer />
-    </PersistGate>
+    <App />
+    <ToastContainer />
   </Provider>,
 );
 
