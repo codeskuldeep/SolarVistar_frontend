@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useDebounce } from "use-debounce";
 import { MagnifyingGlass, X, User } from "@phosphor-icons/react";
 
 const SearchAutocomplete = ({
@@ -19,15 +18,13 @@ const SearchAutocomplete = ({
   disabled = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedTerm] = useDebounce(searchTerm, 300);
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState(null);
-  // 🔑 Internal cache: holds the full selected object so it survives Redux list resets
+  // 🔑 Internal cache: holds the full selected object so it survives list resets
   const [selectedItemCache, setSelectedItemCache] = useState(null);
   const wrapperRef = useRef(null);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
-  const prevTermRef = useRef("");
 
   // Sync cache when selectedId is cleared externally (e.g., X button in parent)
   useEffect(() => {
@@ -45,15 +42,6 @@ const SearchAutocomplete = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, items]);
 
-  // Only trigger onSearch when the debounced text has actually changed
-  useEffect(() => {
-    if (prevTermRef.current !== debouncedTerm) {
-      if (onSearch) {
-        onSearch(debouncedTerm);
-      }
-      prevTermRef.current = debouncedTerm;
-    }
-  }, [debouncedTerm, onSearch]);
 
   const updateCoords = () => {
     if (inputRef.current) {
@@ -92,10 +80,12 @@ const SearchAutocomplete = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // When onSearch is provided, the parent manages filtering via server-side query.
+  // Otherwise we filter client-side with the provided searchFilter.
   const displayItems = onSearch
     ? items.slice(0, 8)
-    : debouncedTerm
-      ? items.filter((item) => searchFilter(item, debouncedTerm)).slice(0, 8)
+    : searchTerm && searchFilter
+      ? items.filter((item) => searchFilter(item, searchTerm)).slice(0, 8)
       : items.slice(0, 8);
 
   // Use internal cache as the source of truth — never depends on items[]
@@ -164,7 +154,10 @@ const SearchAutocomplete = ({
             value={searchTerm}
             disabled={disabled}
             onChange={(e) => {
-              setSearchTerm(e.target.value);
+              const val = e.target.value;
+              setSearchTerm(val);
+              // Notify parent immediately — parent owns debouncing via useDebounce
+              if (onSearch) onSearch(val);
               setIsOpen(true);
             }}
             onFocus={() => !disabled && setIsOpen(true)}
@@ -220,7 +213,7 @@ const SearchAutocomplete = ({
                   ) : (
                     <li className="px-4 py-4">
                       <div className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">
-                        No results found for "{debouncedTerm || searchTerm}"
+                        No results found for "{searchTerm}"
                       </div>
                       {noResultsAction && (
                         <div className="flex justify-center mt-2">

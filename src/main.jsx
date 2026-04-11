@@ -6,6 +6,13 @@ import "./index.css";
 import App from "./App";
 import ToastContainer from "./components/ToastContainer";
 
+// Immediately apply theme to prevent flashing
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.classList.add('dark');
+} else {
+  document.documentElement.classList.remove('dark');
+}
+
 // Legacy data cleanup - wipe old persistence
 localStorage.removeItem('persist:root');
 localStorage.removeItem('persist:crm-root');
