@@ -1,30 +1,33 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 
 import authReducer from "./slices/authSlice";
-import userReducer from "./slices/userSlice";
-import leadReducer from "./slices/leadSlice";
-import visitReducer from "./slices/visitSlice";
 import toastReducer from "./slices/toastSlice";
-import quotationReducer from "./slices/quotationSlice";
+import { baseApi } from "./api/baseApi";
+
+// Import API files to ensure their endpoints are registered
+import "./api/leadsApi";
+import "./api/visitsApi";
+import "./api/quotationsApi";
+import "./api/usersApi";
+import "./api/dashboardApi";
 
 const appReducer = combineReducers({
   auth: authReducer,
   toasts: toastReducer,
-  users: userReducer,
-  leads: leadReducer,
-  visits: visitReducer,
-  quotations: quotationReducer,
+  // Single RTK Query cache
+  [baseApi.reducerPath]: baseApi.reducer,
 });
 
 const rootReducer = (state, action) => {
-  // If the user logs out, we reset the entire state to undefined.
-  // This causes all reducers to return their initialState.
+  // On logout → wipe entire Redux state AND the RTK Query cache
   if (action.type === "auth/logout/fulfilled") {
-    state = undefined;
+    return appReducer(undefined, action);
   }
   return appReducer(state, action);
 };
 
 export const store = configureStore({
   reducer: rootReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(baseApi.middleware),
 });

@@ -17,14 +17,13 @@ import {
   MoneyIcon,
 } from "@phosphor-icons/react";
 import { IndianRupeeIcon } from "lucide-react";
-import { resetLeadsState } from "../../context/slices/leadSlice";
-import { resetVisitState } from "../../context/slices/visitSlice";
-import { resetQuotationState } from "../../context/slices/quotationSlice";
-import { resetUserState } from "../../context/slices/userSlice";
+
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
 
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -33,17 +32,15 @@ const DashboardLayout = () => {
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [isDark]);
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    dispatch(resetLeadsState());
-    dispatch(resetVisitState());
-    dispatch(resetQuotationState());
-    dispatch(resetUserState());
     dispatch(resetAuthState());
     navigate("/login");
   };
