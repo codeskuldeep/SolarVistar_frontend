@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useDebounce } from "use-debounce";
 import { MagnifyingGlass, X, User } from "@phosphor-icons/react";
 
 const SearchAutocomplete = ({
   items = [],
   selectedId,
   onSelect,
+  onSearch,
   placeholder = "Search...",
   label = "Search",
   required = false,
@@ -13,22 +15,45 @@ const SearchAutocomplete = ({
   searchFilter,
   noResultsAction = null,
   isLoading = false,
-  selectedTheme = "emerald", // 'emerald' or 'neutral'
+  selectedTheme = "emerald",
   disabled = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedTerm, setDebouncedTerm] = useState("");
+  const [debouncedTerm] = useDebounce(searchTerm, 300);
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState(null);
+  // 🔑 Internal cache: holds the full selected object so it survives Redux list resets
+  const [selectedItemCache, setSelectedItemCache] = useState(null);
   const wrapperRef = useRef(null);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const prevTermRef = useRef("");
 
-  // Debounce search term
+  // Sync cache when selectedId is cleared externally (e.g., X button in parent)
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedTerm(searchTerm), 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    if (!selectedId) {
+      setSelectedItemCache(null);
+    }
+  }, [selectedId]);
+
+  // Sync cache when selectedId is provided but cache is empty (e.g., initialLeadId on mount)
+  useEffect(() => {
+    if (selectedId && !selectedItemCache) {
+      const found = items.find((item) => item.id === selectedId);
+      if (found) setSelectedItemCache(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, items]);
+
+  // Only trigger onSearch when the debounced text has actually changed
+  useEffect(() => {
+    if (prevTermRef.current !== debouncedTerm) {
+      if (onSearch) {
+        onSearch(debouncedTerm);
+      }
+      prevTermRef.current = debouncedTerm;
+    }
+  }, [debouncedTerm, onSearch]);
 
   const updateCoords = () => {
     if (inputRef.current) {
@@ -44,7 +69,6 @@ const SearchAutocomplete = ({
   useEffect(() => {
     if (isOpen) {
       updateCoords();
-      // Listen to scroll on any scrollable parent
       window.addEventListener("scroll", updateCoords, true);
       window.addEventListener("resize", updateCoords);
     }
@@ -54,12 +78,12 @@ const SearchAutocomplete = ({
     };
   }, [isOpen]);
 
-  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const clickedInsideWrapper = wrapperRef.current && wrapperRef.current.contains(event.target);
-      const clickedInsideDropdown = dropdownRef.current && dropdownRef.current.contains(event.target);
-      
+      const clickedInsideWrapper =
+        wrapperRef.current && wrapperRef.current.contains(event.target);
+      const clickedInsideDropdown =
+        dropdownRef.current && dropdownRef.current.contains(event.target);
       if (!clickedInsideWrapper && !clickedInsideDropdown) {
         setIsOpen(false);
       }
@@ -68,15 +92,18 @@ const SearchAutocomplete = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const displayItems = debouncedTerm
-    ? items.filter((item) => searchFilter(item, debouncedTerm)).slice(0, 8)
-    : items.slice(0, 8);
+  const displayItems = onSearch
+    ? items.slice(0, 8)
+    : debouncedTerm
+      ? items.filter((item) => searchFilter(item, debouncedTerm)).slice(0, 8)
+      : items.slice(0, 8);
 
-  const selectedItem = items.find((item) => item.id === selectedId);
+  // Use internal cache as the source of truth — never depends on items[]
+  const selectedItem = selectedItemCache;
 
   const handleClear = () => {
     setSearchTerm("");
-    setDebouncedTerm("");
+    setSelectedItemCache(null);
     onSelect("");
   };
 
@@ -109,7 +136,9 @@ const SearchAutocomplete = ({
       </label>
 
       {selectedItem ? (
-        <div className={`flex items-center justify-between w-full px-4 py-2.5 ${theme.bg} border ${theme.border} rounded-md shadow-sm transition-colors`}>
+        <div
+          className={`flex items-center justify-between w-full px-4 py-2.5 ${theme.bg} border ${theme.border} rounded-md shadow-sm transition-colors`}
+        >
           <div className="flex items-center flex-1 min-w-0">
             <User className={`w-4 h-4 ${theme.icon} mr-2 flex-shrink-0`} />
             <div className={`text-sm font-medium ${theme.text} truncate`}>
@@ -141,53 +170,69 @@ const SearchAutocomplete = ({
             onFocus={() => !disabled && setIsOpen(true)}
           />
 
-          {isOpen && coords && createPortal(
-            <div 
-              ref={dropdownRef}
-              className="absolute z-[9999] bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-md shadow-lg dark:shadow-2xl max-h-60 flex flex-col overflow-hidden"
-              style={{
-                left: coords.left,
-                top: coords.top + 4, // 4px margin
-                width: coords.width,
-              }}
-            >
-              <ul className="overflow-y-auto flex-1">
-                {isLoading ? (
-                  <li className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 text-center flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 dark:border-white mr-2"></div>
-                    Loading...
-                  </li>
-                ) : displayItems.length > 0 ? (
-                  displayItems.map((item) => (
-                    <li
-                      key={item.id}
-                      onClick={() => {
-                        onSelect(item.id);
-                        setIsOpen(false);
-                        setSearchTerm("");
-                        setDebouncedTerm("");
-                      }}
-                      className="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg/80 border-b border-gray-100 dark:border-dark-border/50 last:border-0 transition-colors"
-                    >
-                      {renderItem(item, false)}
-                    </li>
-                  ))
-                ) : (
-                  <li className="px-4 py-4">
-                    <div className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">
-                      No results found for "{debouncedTerm || searchTerm}"
-                    </div>
-                    {noResultsAction && (
-                      <div className="flex justify-center mt-2">
-                        {noResultsAction(() => setIsOpen(false))}
+          {isOpen &&
+            coords &&
+            createPortal(
+              <div
+                ref={dropdownRef}
+                className="absolute z-[9999] bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-md shadow-lg dark:shadow-2xl max-h-60 flex flex-col overflow-hidden"
+                style={{
+                  left: coords.left,
+                  top: coords.top + 4, // 4px margin
+                  width: coords.width,
+                }}
+              >
+                <ul className="overflow-y-auto flex-1">
+                  {isLoading ? (
+                    // ✨ Skeleton rows
+                    <>
+                      {[...Array(3)].map((_, i) => (
+                        <li
+                          key={i}
+                          className="px-4 py-3 border-b border-gray-100 dark:border-dark-border/50 last:border-0"
+                        >
+                          <div className="animate-pulse flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                            <div className="flex-1 space-y-1.5">
+                              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded w-1/2" />
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </>
+                  ) : displayItems.length > 0 ? (
+                    displayItems.map((item) => (
+                      <li
+                        key={item.id}
+                        onClick={() => {
+                          // 🔑 Cache the full item object before clearing the search term
+                          setSelectedItemCache(item);
+                          onSelect(item.id);
+                          setIsOpen(false);
+                          setSearchTerm("");
+                        }}
+                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg/80 border-b border-gray-100 dark:border-dark-border/50 last:border-0 transition-colors"
+                      >
+                        {renderItem(item, false)}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-4">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">
+                        No results found for "{debouncedTerm || searchTerm}"
                       </div>
-                    )}
-                  </li>
-                )}
-              </ul>
-            </div>,
-            document.body
-          )}
+                      {noResultsAction && (
+                        <div className="flex justify-center mt-2">
+                          {noResultsAction(() => setIsOpen(false))}
+                        </div>
+                      )}
+                    </li>
+                  )}
+                </ul>
+              </div>,
+              document.body,
+            )}
         </div>
       )}
     </div>
