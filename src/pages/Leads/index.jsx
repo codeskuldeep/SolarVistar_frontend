@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-// 1. 👇 Import useNavigate from react-router-dom
 import { useNavigate } from "react-router-dom";
 import {
   fetchLeads,
@@ -105,27 +104,49 @@ const Leads = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const prevSearchRef = useRef("");
 
+  // Wrap this in useCallback to prevent infinite render loops
+  const handleStaffSearch = useCallback(
+    (term) => {
+      if (canAssign) {
+        // Limit to 10 to keep the dropdown snappy
+        dispatch(fetchUsers({ limit: 10, search: term }));
+      }
+    },
+    [dispatch, canAssign],
+  );
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch logic
+  // 1. Leads Fetch & Server-Side Search Effect
   useEffect(() => {
-    if (!isLoading) {
-      dispatch(fetchLeads({ page: 1, limit: LEADS_PER_PAGE, search: debouncedSearch }));
-    }
-    if (canAssign && !isUsersLoading) {
-      dispatch(fetchUsers({ limit: 100 }));
-    }
-    
-    prevSearchRef.current = debouncedSearch;
-  }, [dispatch, debouncedSearch, canAssign]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Unconditionally dispatch when debouncedSearch changes so no keystrokes are dropped.
+    // Always reset to page 1 when the search term changes.
+    const promise = dispatch(
+      fetchLeads({
+        page: 1,
+        limit: LEADS_PER_PAGE,
+        search: debouncedSearch,
+      }),
+    );
+
+    // Optional but recommended: Cancel the previous request if the user keeps typing
+    return () => {
+      promise.abort();
+    };
+  }, [dispatch, debouncedSearch]);
 
   // Pagination handler — carries current search forward
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= meta.totalPages) {
-      dispatch(fetchLeads({ page: newPage, limit: LEADS_PER_PAGE, search: debouncedSearch }));
+      dispatch(
+        fetchLeads({
+          page: newPage,
+          limit: LEADS_PER_PAGE,
+          search: debouncedSearch,
+        }),
+      );
     }
   };
 
@@ -235,7 +256,10 @@ const Leads = () => {
 
       {/* ── Search Bar ── */}
       <div className="relative max-w-xs">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" weight="bold" />
+        <MagnifyingGlassIcon
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
+          weight="bold"
+        />
         <input
           type="text"
           value={searchTerm}
@@ -338,7 +362,8 @@ const Leads = () => {
                           <>
                             <br />
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {lead.assignedTo.department?.name || lead.assignedTo.department}
+                              {lead.assignedTo.department?.name ||
+                                lead.assignedTo.department}
                             </span>
                           </>
                         )}
@@ -641,6 +666,8 @@ const Leads = () => {
                     setCreateData({ ...createData, assignedToId: v })
                   }
                   staffUsers={staffUsers}
+                  onSearch={handleStaffSearch} // 👈 Connect the search
+                  isLoading={isUsersLoading} // 👈 Show the loading spinner in dropdown
                 />
 
                 <div>
@@ -697,6 +724,8 @@ const Leads = () => {
                     setUpdateData({ ...updateData, assignedToId: v })
                   }
                   staffUsers={staffUsers}
+                  onSearch={handleStaffSearch}
+                  isLoading={isUsersLoading}
                   label="Reassign Lead"
                 />
 
@@ -829,26 +858,51 @@ const AssignSelect = ({
   value,
   onChange,
   staffUsers,
+  onSearch,
+  isLoading,
   label = "Assign To",
-}) => (
-  <div className={!isAdmin ? "opacity-60 pointer-events-none" : ""}>
-    <SearchAutocomplete
-      items={staffUsers}
-      selectedId={value}
-      onSelect={onChange}
-      label={`${label} ${!isAdmin ? "(Restricted)" : ""}`}
-      placeholder={isAdmin ? "Search staff by name..." : "You cannot assign staff"}
-      selectedTheme="neutral"
-      disabled={!isAdmin}
-      renderItem={(staff, isSelected) =>
+}) => {
+  const [cachedStaff, setCachedStaff] = useState(null);
+
+  const safeStaffList = [...staffUsers];
+  if (cachedStaff && !safeStaffList.some((s) => s.id === cachedStaff.id)) {
+    safeStaffList.push(cachedStaff);
+  }
+
+  return (
+    <div className={!isAdmin ? "opacity-60 pointer-events-none" : ""}>
+      <SearchAutocomplete
+        items={safeStaffList}
+        selectedId={value}
+        onSelect={(id) => {
+          if (!id) {
+            setCachedStaff(null);
+            onChange("");
+            return;
+          }
+          const staff = safeStaffList.find((s) => s.id === id);
+          if (staff) setCachedStaff(staff);
+          onChange(id);
+        }}
+        onSearch={onSearch}
+        isLoading={isLoading}
+        label={`${label} ${!isAdmin ? "(Restricted)" : ""}`}
+        placeholder={
+          isAdmin ? "Search staff by name..." : "You cannot assign staff"
+        }
+        selectedTheme="neutral"
+        disabled={!isAdmin}
+        renderItem={(staff, isSelected) =>
         isSelected ? (
-          `${staff.name} (${staff.department || staff.role})`
+          `${staff.name} (${staff.department?.name || staff.department || staff.role})`
         ) : (
           <div className="flex flex-col">
             <span className="font-semibold text-gray-900 dark:text-white">
               {staff.name}
             </span>
-            <span className="text-xs text-gray-500">{staff.department || staff.role}</span>
+            <span className="text-xs text-gray-500">
+              {staff.department?.name || staff.department || staff.role}
+            </span>
           </div>
         )
       }
@@ -857,7 +911,8 @@ const AssignSelect = ({
       }
     />
   </div>
-);
+  );
+};
 
 const ModalFooter = ({ onCancel, isLoading, submitLabel, submitColor }) => (
   <div className="flex justify-end gap-3 pt-2 pb-1">

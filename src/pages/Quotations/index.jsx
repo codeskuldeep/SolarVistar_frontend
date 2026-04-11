@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Plus,
@@ -348,11 +348,27 @@ const QuotationForm = ({
   const { isSaving, error } = useSelector((state) => state.quotations);
   const { leads, isLoading: leadsLoading } = useSelector((state) => state.leads);
 
+  // Server-side search handler — fetch a small set on each keystroke
+  const handleLeadSearch = useCallback(
+    (term) => {
+      dispatch(fetchLeads({ limit: 10, search: term }));
+    },
+    [dispatch],
+  );
+
+  // Fetch initial suggestions once when the form mounts
   useEffect(() => {
-    if (!leadsLoading) {
-      dispatch(fetchLeads({ page: 1, limit: 1000 }));
-    }
+    dispatch(fetchLeads({ limit: 10 }));
   }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [cachedLead, setCachedLead] = useState(
+    isEdit && initialData?.lead ? initialData.lead : null
+  );
+
+  const safeLeadsList = [...leads];
+  if (cachedLead && !safeLeadsList.some((l) => l.id === cachedLead.id)) {
+    safeLeadsList.push(cachedLead);
+  }
 
   const [formData, setFormData] = useState({
     leadId: initialLeadId || "",
@@ -459,11 +475,19 @@ const QuotationForm = ({
           {/* Disable lead search if editing, because the quotation is already tied to the lead! */}
           {!isEdit ? (
             <SearchAutocomplete
-              items={leads}
+              items={safeLeadsList}
               selectedId={formData.leadId || ""}
-              onSelect={(id) =>
-                setFormData((prev) => ({ ...prev, leadId: id }))
-              }
+              onSelect={(id) => {
+                if (!id) {
+                  setCachedLead(null);
+                  setFormData((prev) => ({ ...prev, leadId: "" }));
+                  return;
+                }
+                const selectedLead = safeLeadsList.find((l) => l.id === id);
+                if (selectedLead) setCachedLead(selectedLead);
+                setFormData((prev) => ({ ...prev, leadId: id }));
+              }}
+              onSearch={handleLeadSearch}
               label="Search Customer / Lead"
               placeholder="Type name or phone number..."
               required={true}

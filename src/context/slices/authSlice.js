@@ -6,8 +6,14 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await api.post("/auth/login", credentials);
-      // The backend automatically sets the cookie, so we just return the user profile
-      return { user: response.data.data.user };
+      
+      // 1. Extract both token and user from the backend payload
+      const { token, user } = response.data.data;
+      
+      // 2. Store the token securely in sessionStorage
+      sessionStorage.setItem("authToken", token);
+      
+      return { user };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Login failed");
     }
@@ -17,31 +23,44 @@ export const loginUser = createAsyncThunk(
 export const getCurrentUser = createAsyncThunk(
   "auth/me",
   async (_, { rejectWithValue }) => {
+    // 1. Fast fail: Don't bother hitting the API if the token isn't there
+    const token = sessionStorage.getItem("authToken");
+    if (!token) {
+      return rejectWithValue("No token found, user is not authenticated");
+    }
+
     try {
-      const response = await api.get("/auth/me"); // cookie automatically sent
+      // (Your Axios interceptor in api.js should automatically attach the token here)
+      const response = await api.get("/auth/me"); 
       return { user: response.data.data.user };
     } catch (error) {
+      // 2. If the token is invalid/expired, clear it out
+      sessionStorage.removeItem("authToken");
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch quotations",
+        error.response?.data?.message || "Failed to fetch user profile",
       );
     }
   },
 );
 
-export const logoutUser =  createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
+export const logoutUser = createAsyncThunk(
+  "auth/logout", 
+  async (_, { rejectWithValue }) => {
   try {
     await api.post("/auth/logout"); 
+    // 1. Clear the token on successful logout
+    sessionStorage.removeItem("authToken");
   } catch (error) {
-     return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch quotations",
-      );
+    // 2. Even if the backend fails, clear the local token to force logout
+    sessionStorage.removeItem("authToken");
+    return rejectWithValue(
+      error.response?.data?.message || "Logout failed",
+    );
   }
 });
 
-
 const authSlice = createSlice({
   name: "auth",
- 
   initialState: {
     user: null,
     isAuthenticated: false,
@@ -58,7 +77,6 @@ const authSlice = createSlice({
       state.isLoading = true;
       state.error = null;
     }
-
   },
   extraReducers: (builder) => {
     builder
@@ -97,7 +115,8 @@ const authSlice = createSlice({
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload; });
+        state.error = action.payload; 
+      });
   },
 });
 

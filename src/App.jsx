@@ -8,6 +8,7 @@ const App = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
+
     dispatch(getCurrentUser());
   }, [dispatch]);
 
@@ -15,4 +16,3 @@ const App = () => {
 };
 
 export default App;
-
