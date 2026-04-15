@@ -1,17 +1,9 @@
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeads } from '../../context/slices/leadSlice';
 import { Target, TrendUp, PhoneCall, EnvelopeSimple, WhatsappLogo } from '@phosphor-icons/react';
+import { useGetLeadsQuery } from '../../context/api/leadsApi';
 
 export default function SalesDashboard() {
-  const dispatch = useDispatch();
-  const { leads, isLoading } = useSelector((state) => state.leads);
-
-  useEffect(() => {
-    if (!isLoading) {
-      dispatch(fetchLeads({ page: 1, limit: 50 }));
-    }
-  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data, isLoading } = useGetLeadsQuery({ page: 1, limit: 50 });
+  const leads = data?.leads || [];
 
   // KPI Calculations
   const totalLeads = leads?.length || 0;

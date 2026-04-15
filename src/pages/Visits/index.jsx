@@ -78,6 +78,8 @@ const Visits = () => {
   const dispatch = useDispatch();
   const { user: currentUser } = useSelector((state) => state.auth);
   const canAssign = currentUser?.role === "ADMIN" || currentUser?.department?.name === "Sales";
+  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
+  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
 
   // ── Table search ──
   const [searchTerm, setSearchTerm] = useState("");
@@ -187,13 +189,15 @@ const Visits = () => {
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Site Visits</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Schedule and track field operations and site assessments.</p>
         </div>
-        <button
-          onClick={() => setActiveModal("CREATE")}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
-        >
-          <CalendarPlusIcon weight="bold" size={18} />
-          Schedule Visit
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => setActiveModal("CREATE")}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
+          >
+            <CalendarPlusIcon weight="bold" size={18} />
+            Schedule Visit
+          </button>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -279,25 +283,27 @@ const Visits = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => {
-                            setSelectedVisit(visit);
-                            setUpdateData({
-                              status: visit.status || "SCHEDULED",
-                              comments: visit.comments || "",
-                              customerFeedback: visit.customerFeedback || "",
-                              workCompleted: visit.workCompleted || "",
-                              issuesIdentified: visit.issuesIdentified || "",
-                              nextSteps: visit.nextSteps || "",
-                              assignedStaffId: visit.assignedStaffId || "",
-                            });
-                            setActiveModal("UPDATE");
-                          }}
-                          className="text-gray-500 hover:text-green-600 transition-colors"
-                          title="Update Visit & Log Notes"
-                        >
-                          <CheckSquareOffsetIcon size={20} weight="regular" />
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => {
+                              setSelectedVisit(visit);
+                              setUpdateData({
+                                status: visit.status || "SCHEDULED",
+                                comments: visit.comments || "",
+                                customerFeedback: visit.customerFeedback || "",
+                                workCompleted: visit.workCompleted || "",
+                                issuesIdentified: visit.issuesIdentified || "",
+                                nextSteps: visit.nextSteps || "",
+                                assignedStaffId: visit.assignedStaffId || "",
+                              });
+                              setActiveModal("UPDATE");
+                            }}
+                            className="text-gray-500 hover:text-green-600 transition-colors"
+                            title="Update Visit & Log Notes"
+                          >
+                            <CheckSquareOffsetIcon size={20} weight="regular" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

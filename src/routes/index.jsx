@@ -8,6 +8,8 @@ import Visits from "../pages/Visits";
 import Overview from "../pages/Dashboard"; // Import the new Dashboard component
 import QuotationManager from "../pages/Quotations";
 import ExistingCustomers from "../pages/Customers";
+import LeadDocuments from "../components/LeadDocuments";
+import Profile from "../pages/Profile";
 export const router = createBrowserRouter([
   {
     path: "/login",
@@ -48,6 +50,14 @@ export const router = createBrowserRouter([
           {
             path: "customers",
             element: <ExistingCustomers />, // Future customers page (you'll create this later)
+          },
+          {
+            path: "customers/:customerId/documents",
+            element: <LeadDocuments />,
+          },
+          {
+            path: "profile",
+            element: <Profile />,
           },
         ],
       },

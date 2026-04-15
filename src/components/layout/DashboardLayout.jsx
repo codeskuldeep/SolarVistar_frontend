@@ -179,7 +179,7 @@ const DashboardLayout = () => {
               </span>
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              <span onClick={() => navigate('/profile')} className="text-sm font-medium text-gray-900 dark:text-white truncate cursor-pointer hover:underline">
                 {user?.name || "Staff Member"}
               </span>
               <span className="text-[11px] text-gray-500 dark:text-gray-400 capitalize">

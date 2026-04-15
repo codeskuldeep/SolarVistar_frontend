@@ -1,0 +1,326 @@
+/* src/components/LeadDocuments/LeadDocuments.css */
+
+.ldx {
+  --ldx-bg: #ffffff;
+  --ldx-surface: #ffffff;
+  --ldx-surface-muted: #f7f8f6;
+  --ldx-border: #e6e8e4;
+  --ldx-border-strong: #d6dad2;
+  --ldx-text: #1c2520;
+  --ldx-text-muted: #6b7469;
+  --ldx-text-subtle: #8a9286;
+
+  --ldx-green-900: #1f4733;
+  --ldx-green-700: #2e6b4a;
+  --ldx-green-600: #37805a;
+  --ldx-green-50:  #eef4ef;
+
+  --ldx-yellow: #c9a227; /* muted solar accent, used sparingly */
+  --ldx-danger: #a8392f;
+  --ldx-danger-bg: #fbefee;
+
+  --ldx-radius: 8px;
+  --ldx-radius-sm: 6px;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--ldx-text);
+  background: var(--ldx-bg);
+  border: 1px solid var(--ldx-border);
+  border-radius: var(--ldx-radius);
+  padding: 24px;
+  max-width: 960px;
+}
+
+/* Header */
+.ldx__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--ldx-border);
+}
+
+.ldx__title {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ldx-text);
+}
+
+.ldx__subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ldx-text-muted);
+  line-height: 1.5;
+}
+
+.ldx__progress {
+  min-width: 180px;
+  text-align: right;
+}
+
+.ldx__progress-text {
+  font-size: 13px;
+  color: var(--ldx-text-muted);
+  margin-bottom: 6px;
+}
+
+.ldx__progress-count {
+  font-weight: 600;
+  color: var(--ldx-green-700);
+  font-size: 14px;
+}
+
+.ldx__progress-bar {
+  height: 4px;
+  background: var(--ldx-surface-muted);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ldx__progress-fill {
+  height: 100%;
+  background: var(--ldx-green-600);
+  transition: width 240ms ease;
+}
+
+/* States */
+.ldx__state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--ldx-text-muted);
+  background: var(--ldx-surface-muted);
+  border-radius: var(--ldx-radius-sm);
+}
+
+.ldx__state--error {
+  color: var(--ldx-danger);
+  background: var(--ldx-danger-bg);
+  justify-content: space-between;
+}
+
+/* List */
+.ldx__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Row */
+.ldx-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--ldx-surface);
+  border: 1px solid var(--ldx-border);
+  border-radius: var(--ldx-radius-sm);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.ldx-row:hover {
+  border-color: var(--ldx-border-strong);
+}
+
+.ldx-row--done {
+  background: var(--ldx-green-50);
+  border-color: #d7e4d9;
+}
+
+.ldx-row--done:hover {
+  border-color: #c4d4c6;
+}
+
+/* Marker */
+.ldx-row__marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--ldx-surface-muted);
+  color: var(--ldx-text-subtle);
+}
+
+.ldx-row--done .ldx-row__marker {
+  background: var(--ldx-green-600);
+  color: #ffffff;
+}
+
+.ldx-row__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ldx-text-subtle);
+}
+
+/* Info */
+.ldx-row__info {
+  min-width: 0;
+}
+
+.ldx-row__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ldx-text);
+  margin-bottom: 3px;
+}
+
+.ldx-row__meta {
+  font-size: 12px;
+  color: var(--ldx-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ldx-row__meta--muted {
+  color: var(--ldx-text-subtle);
+}
+
+.ldx-row__meta strong {
+  color: var(--ldx-text);
+  font-weight: 500;
+}
+
+.ldx-row__divider {
+  color: var(--ldx-border-strong);
+}
+
+.ldx-row__error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ldx-danger);
+}
+
+/* Actions */
+.ldx-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ldx-row__file-input {
+  display: none;
+}
+
+/* Buttons */
+.ldx-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 8px 14px;
+  border-radius: var(--ldx-radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  white-space: nowrap;
+}
+
+.ldx-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.ldx-btn--primary {
+  background: var(--ldx-green-700);
+  color: #ffffff;
+  border-color: var(--ldx-green-700);
+}
+
+.ldx-btn--primary:hover:not(:disabled) {
+  background: var(--ldx-green-900);
+  border-color: var(--ldx-green-900);
+}
+
+.ldx-btn--ghost {
+  background: #ffffff;
+  color: var(--ldx-green-700);
+  border-color: var(--ldx-border-strong);
+}
+
+.ldx-btn--ghost:hover:not(:disabled) {
+  background: var(--ldx-green-50);
+  border-color: #c4d4c6;
+  color: var(--ldx-green-900);
+}
+
+.ldx-btn--danger {
+  background: #ffffff;
+  color: var(--ldx-danger);
+  border-color: #e7d4d2;
+}
+
+.ldx-btn--danger:hover:not(:disabled) {
+  background: var(--ldx-danger-bg);
+  border-color: #dcc0bd;
+}
+
+.ldx-btn:focus-visible {
+  outline: 2px solid var(--ldx-green-600);
+  outline-offset: 2px;
+}
+
+/* Spinner */
+.ldx-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  display: inline-block;
+  animation: ldx-spin 0.7s linear infinite;
+}
+
+@keyframes ldx-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .ldx {
+    padding: 16px;
+  }
+
+  .ldx__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ldx__progress {
+    text-align: left;
+  }
+
+  .ldx-row {
+    grid-template-columns: 22px 1fr;
+    grid-template-areas:
+      "marker info"
+      ".      actions";
+    row-gap: 12px;
+  }
+
+  .ldx-row__marker { grid-area: marker; }
+  .ldx-row__info   { grid-area: info; }
+  .ldx-row__actions {
+    grid-area: actions;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}

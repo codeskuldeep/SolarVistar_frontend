@@ -27,7 +27,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
 //Quotations Send to whatsapp!
 
-//existing customers, with statuses jin jin ka status converted ho wo, existing customers m show krenge !
+//DONE-existing customers, with statuses jin jin ka status converted ho wo, existing customers m show krenge !
 //documents upload krne ka option dena h, there will be statuses also in there, 
 //Document Collection (in progress/uploaded/verified/rejected)
 //There should be an column for payment method Cash/Loan 
