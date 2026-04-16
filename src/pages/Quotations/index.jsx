@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { useDebounce } from "use-debounce";
 import {
   Plus,
@@ -27,6 +28,10 @@ import Pagination from "../../components/ui/Pagination";
 import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
 
 export default function QuotationManager() {
+  const { user: currentUser } = useSelector((state) => state.auth);
+  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
+  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
+
   const [searchParams, setSearchParams] = useSearchParams();
   const urlLeadId = searchParams.get("leadId");
 
@@ -49,10 +54,12 @@ export default function QuotationManager() {
           </div>
           <div className="flex items-center space-x-4">
             {view === "list" ? (
-              <button onClick={() => setView("create")}
-                className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700">
-                <Plus className="w-4 h-4 mr-2" /> New Quotation
-              </button>
+              !isReadOnly && (
+                <button onClick={() => setView("create")}
+                  className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700">
+                  <Plus className="w-4 h-4 mr-2" /> New Quotation
+                </button>
+              )
             ) : (
               <button onClick={() => setView("list")}
                 className="px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-sm font-medium rounded-md">
@@ -433,6 +440,10 @@ const FormSelect = ({ label, name, value, onChange, options, className = "" }) =
 );
 
 const QuotationViewer = ({ quoteId, onBack }) => {
+  const { user: currentUser } = useSelector((state) => state.auth);
+  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
+  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
+
   const [isEditing, setIsEditing] = useState(false);
   const { data } = useGetQuotationsQuery({ limit: 100 }); // fetch all for viewer lookup
   const quote = data?.quotations?.find((q) => q.id === quoteId);
@@ -447,10 +458,12 @@ const QuotationViewer = ({ quoteId, onBack }) => {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </button>
         <div className="flex space-x-3">
-          <button onClick={() => setIsEditing(!isEditing)}
-            className="flex items-center px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-md hover:bg-slate-200 dark:hover:bg-slate-700">
-            <Edit2 className="w-4 h-4 mr-2" /> {isEditing ? "Cancel Edit" : "Edit Quotation"}
-          </button>
+          {!isReadOnly && (
+            <button onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-md hover:bg-slate-200 dark:hover:bg-slate-700">
+              <Edit2 className="w-4 h-4 mr-2" /> {isEditing ? "Cancel Edit" : "Edit Quotation"}
+            </button>
+          )}
           {!isEditing && (
             <button onClick={() => window.print()}
               className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-500 shadow-sm">

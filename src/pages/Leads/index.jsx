@@ -71,6 +71,8 @@ const Leads = () => {
 
   const isAdmin = currentUser?.role === "ADMIN";
   const canAssign = isAdmin || currentUser?.department?.name === "Sales";
+  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
+  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
 
   // ── Table search state ──
   const [searchTerm, setSearchTerm] = useState("");
@@ -110,19 +112,28 @@ const Leads = () => {
     data: leadsData,
     isLoading,
     isFetching,
-  } = useGetLeadsQuery({ page, limit: LEADS_PER_PAGE, search: debouncedSearch });
+  } = useGetLeadsQuery({
+    page,
+    limit: LEADS_PER_PAGE,
+    search: debouncedSearch,
+  });
 
   const { data: staffData, isFetching: staffFetching } = useGetUsersQuery(
     { limit: 10, search: debouncedStaffSearch },
-    { skip: !canAssign }
+    { skip: !canAssign },
   );
 
   const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
-  const [updateLeadStatus, { isLoading: isUpdating }] = useUpdateLeadStatusMutation();
+  const [updateLeadStatus, { isLoading: isUpdating }] =
+    useUpdateLeadStatusMutation();
   const [addFollowUp, { isLoading: isFollowingUp }] = useAddFollowUpMutation();
 
   const leadsList = leadsData?.leads ?? [];
-  const meta = leadsData?.meta ?? { totalPages: 1, currentPage: 1, totalItems: 0 };
+  const meta = leadsData?.meta ?? {
+    totalPages: 1,
+    currentPage: 1,
+    totalItems: 0,
+  };
   const staffUsers = staffData?.users ?? [];
 
   // Reset to page 1 when search changes
@@ -148,7 +159,11 @@ const Leads = () => {
       notes: "",
       assignedToId: "",
     });
-    setFollowUpData({ method: "PHONE_CALL", remarks: "", nextFollowUpDate: "" });
+    setFollowUpData({
+      method: "PHONE_CALL",
+      remarks: "",
+      nextFollowUpDate: "",
+    });
     setStaffSearch("");
   };
 
@@ -157,9 +172,16 @@ const Leads = () => {
     const result = await createLead(createData);
     if (!result.error) {
       handleCloseModal();
-      dispatch(addToast({ message: "Lead created successfully", type: "success" }));
+      dispatch(
+        addToast({ message: "Lead created successfully", type: "success" }),
+      );
     } else {
-      dispatch(addToast({ message: result.error?.data?.message || "Failed to create lead", type: "error" }));
+      dispatch(
+        addToast({
+          message: result.error?.data?.message || "Failed to create lead",
+          type: "error",
+        }),
+      );
     }
   };
 
@@ -172,9 +194,16 @@ const Leads = () => {
     });
     if (!result.error) {
       setActiveModal(null);
-      dispatch(addToast({ message: "Lead updated successfully", type: "success" }));
+      dispatch(
+        addToast({ message: "Lead updated successfully", type: "success" }),
+      );
     } else {
-      dispatch(addToast({ message: result.error?.data?.message || "Failed to update lead", type: "error" }));
+      dispatch(
+        addToast({
+          message: result.error?.data?.message || "Failed to update lead",
+          type: "error",
+        }),
+      );
     }
   };
 
@@ -183,9 +212,16 @@ const Leads = () => {
     const result = await addFollowUp({ id: selectedLead.id, followUpData });
     if (!result.error) {
       handleCloseModal();
-      dispatch(addToast({ message: "Follow-up logged successfully", type: "success" }));
+      dispatch(
+        addToast({ message: "Follow-up logged successfully", type: "success" }),
+      );
     } else {
-      dispatch(addToast({ message: result.error?.data?.message || "Failed to log follow-up", type: "error" }));
+      dispatch(
+        addToast({
+          message: result.error?.data?.message || "Failed to log follow-up",
+          type: "error",
+        }),
+      );
     }
   };
 
@@ -203,13 +239,15 @@ const Leads = () => {
             Track and manage potential solar installations.
           </p>
         </div>
-        <button
-          onClick={() => setActiveModal("CREATE")}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap"
-        >
-          <PlusIcon size={17} weight="bold" />
-          Add Lead
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => setActiveModal("CREATE")}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap"
+          >
+            <PlusIcon size={17} weight="bold" />
+            Add Lead
+          </button>
+        )}
       </div>
 
       {/* ── Search Bar ── */}
@@ -236,9 +274,17 @@ const Leads = () => {
       </div>
 
       {/* ── Desktop Table ── */}
-      <div className={`hidden md:block bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm transition-opacity ${isFetching && !isLoading ? "opacity-70" : "opacity-100"}`}>
+      <div
+        className={`hidden md:block bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm transition-opacity ${isFetching && !isLoading ? "opacity-70" : "opacity-100"}`}
+      >
         <div className="grid grid-cols-[2fr_1fr_1fr_1.5fr_auto] gap-4 px-6 py-3 bg-gray-50 dark:bg-dark-bg border-b border-gray-200 dark:border-dark-border">
-          {["Customer Info", "Status", "Assigned To", "Last Follow-up", "Actions"].map((h) => (
+          {[
+            "Customer Info",
+            "Status",
+            "Assigned To",
+            "Last Follow-up",
+            "Actions",
+          ].map((h) => (
             <span
               key={h}
               className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest"
@@ -299,7 +345,9 @@ const Leads = () => {
                   </div>
 
                   <div>
-                    <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ring-1 ring-inset ${bg}`}>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ring-1 ring-inset ${bg}`}
+                    >
                       {label}
                     </span>
                   </div>
@@ -312,13 +360,16 @@ const Leads = () => {
                           <>
                             <br />
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {lead.assignedTo.department?.name || lead.assignedTo.department}
+                              {lead.assignedTo.department?.name ||
+                                lead.assignedTo.department}
                             </span>
                           </>
                         )}
                       </div>
                     ) : (
-                      <span className="text-gray-400 italic text-xs">Unassigned</span>
+                      <span className="text-gray-400 italic text-xs">
+                        Unassigned
+                      </span>
                     )}
                   </div>
 
@@ -333,7 +384,9 @@ const Leads = () => {
                         </span>
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400 italic">No history</span>
+                      <span className="text-xs text-gray-400 italic">
+                        No history
+                      </span>
                     )}
                   </div>
 
@@ -353,34 +406,41 @@ const Leads = () => {
                     >
                       <PhoneIcon size={17} />
                     </ActionButton>
-                    <ActionButton
-                      title="Create Quotation"
-                      hoverColor="hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                      onClick={() => navigate(`/quotations?leadId=${lead.id}`)}
-                    >
-                      <ReceiptIcon size={17} />
-                    </ActionButton>
-                    <ActionButton
-                      title="Update Status"
-                      hoverColor="hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                      onClick={() => {
-                        setSelectedLead(lead);
-                        setUpdateData({ status: lead.status || "NEW", assignedToId: lead.assignedToId || "" });
-                        setActiveModal("UPDATE_STATUS");
-                      }}
-                    >
-                      <NotePencilIcon size={17} />
-                    </ActionButton>
-                    <ActionButton
-                      title="Add Follow-up"
-                      hoverColor="hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                      onClick={() => {
-                        setSelectedLead(lead);
-                        setActiveModal("ADD_FOLLOWUP");
-                      }}
-                    >
-                      <CalendarPlusIcon size={17} />
-                    </ActionButton>
+                    {!isReadOnly && (
+                      <>
+                        <ActionButton
+                          title="Create Quotation"
+                          hoverColor="hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                          onClick={() => navigate(`/quotations?leadId=${lead.id}`)}
+                        >
+                          <ReceiptIcon size={17} />
+                        </ActionButton>
+                        <ActionButton
+                          title="Update Status"
+                          hoverColor="hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setUpdateData({
+                              status: lead.status || "NEW",
+                              assignedToId: lead.assignedToId || "",
+                            });
+                            setActiveModal("UPDATE_STATUS");
+                          }}
+                        >
+                          <NotePencilIcon size={17} />
+                        </ActionButton>
+                        <ActionButton
+                          title="Add Follow-up"
+                          hoverColor="hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setActiveModal("ADD_FOLLOWUP");
+                          }}
+                        >
+                          <CalendarPlusIcon size={17} />
+                        </ActionButton>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -417,43 +477,63 @@ const Leads = () => {
                       </span>
                     </div>
                   </div>
-                  <span className={`flex-shrink-0 inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ring-1 ring-inset ${bg}`}>
+                  <span
+                    className={`flex-shrink-0 inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ring-1 ring-inset ${bg}`}
+                  >
                     {label}
                   </span>
                 </div>
 
                 <div className="px-3 py-2 flex items-center gap-1 bg-gray-50/60 dark:bg-dark-bg/30 overflow-x-auto">
-                  <MobileActionBtn href={`https://wa.me/${phone}`} label="WhatsApp" color="text-green-600 bg-green-50 dark:bg-green-900/20">
+                  <MobileActionBtn
+                    href={`https://wa.me/${phone}`}
+                    label="WhatsApp"
+                    color="text-green-600 bg-green-50 dark:bg-green-900/20"
+                  >
                     <WhatsappLogoIcon size={15} />
                   </MobileActionBtn>
-                  <MobileActionBtn href={`tel:${lead.phoneNumber}`} label="Call" color="text-sky-600 bg-sky-50 dark:bg-sky-900/20">
+                  <MobileActionBtn
+                    href={`tel:${lead.phoneNumber}`}
+                    label="Call"
+                    color="text-sky-600 bg-sky-50 dark:bg-sky-900/20"
+                  >
                     <PhoneIcon size={15} />
                   </MobileActionBtn>
 
                   <div className="flex-1" />
 
-                  <button
-                    onClick={() => navigate(`/quotations?leadId=${lead.id}`)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/30 transition-colors whitespace-nowrap"
-                  >
-                    <ReceiptIcon size={13} /> Quote
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedLead(lead);
-                      setUpdateData({ status: lead.status || "NEW", assignedToId: lead.assignedToId || "" });
-                      setActiveModal("UPDATE_STATUS");
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 dark:text-green-300 dark:bg-green-900/30 transition-colors"
-                  >
-                    <NotePencilIcon size={13} /> Edit
-                  </button>
-                  <button
-                    onClick={() => { setSelectedLead(lead); setActiveModal("ADD_FOLLOWUP"); }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 transition-colors whitespace-nowrap"
-                  >
-                    <CalendarPlusIcon size={13} /> Follow-up
-                  </button>
+                  {!isReadOnly && (
+                    <>
+                      <button
+                        onClick={() => navigate(`/quotations?leadId=${lead.id}`)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/30 transition-colors whitespace-nowrap"
+                      >
+                        <ReceiptIcon size={13} /> Quote
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedLead(lead);
+                          setUpdateData({
+                            status: lead.status || "NEW",
+                            assignedToId: lead.assignedToId || "",
+                          });
+                          setActiveModal("UPDATE_STATUS");
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 dark:text-green-300 dark:bg-green-900/30 transition-colors"
+                      >
+                        <NotePencilIcon size={13} /> Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedLead(lead);
+                          setActiveModal("ADD_FOLLOWUP");
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 transition-colors whitespace-nowrap"
+                      >
+                        <CalendarPlusIcon size={13} /> Follow-up
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -461,7 +541,12 @@ const Leads = () => {
         )}
       </div>
 
-      <Pagination meta={meta} isLoading={isLoading} onPageChange={handlePageChange} itemName="leads" />
+      <Pagination
+        meta={meta}
+        isLoading={isLoading}
+        onPageChange={handlePageChange}
+        itemName="leads"
+      />
 
       {/* ── MODALS ── */}
       {activeModal && (
@@ -476,7 +561,8 @@ const Leads = () => {
             <div className="px-5 py-4 border-b border-gray-100 dark:border-dark-border flex justify-between items-center flex-shrink-0">
               <h3 className="text-base font-bold text-gray-900 dark:text-white">
                 {activeModal === "CREATE" && "Add New Lead"}
-                {activeModal === "UPDATE_STATUS" && `Update: ${selectedLead?.customerName}`}
+                {activeModal === "UPDATE_STATUS" &&
+                  `Update: ${selectedLead?.customerName}`}
                 {activeModal === "ADD_FOLLOWUP" && "Log Follow-up"}
               </h3>
               <button
@@ -489,44 +575,90 @@ const Leads = () => {
 
             {/* ── CREATE LEAD ── */}
             {activeModal === "CREATE" && (
-              <form onSubmit={handleCreateSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+              <form
+                onSubmit={handleCreateSubmit}
+                className="p-5 space-y-4 overflow-y-auto flex-1"
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelCls}>Customer Name *</label>
-                    <input type="text" required value={createData.customerName}
-                      onChange={(e) => setCreateData({ ...createData, customerName: e.target.value })}
-                      placeholder="Full name" className={inputCls} />
+                    <input
+                      type="text"
+                      required
+                      value={createData.customerName}
+                      onChange={(e) =>
+                        setCreateData({
+                          ...createData,
+                          customerName: e.target.value,
+                        })
+                      }
+                      placeholder="Full name"
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Phone Number *</label>
-                    <input type="tel" required value={createData.phoneNumber}
-                      onChange={(e) => setCreateData({ ...createData, phoneNumber: e.target.value })}
-                      placeholder="+91 98765 43210" className={inputCls} />
+                    <input
+                      type="tel"
+                      required
+                      value={createData.phoneNumber}
+                      onChange={(e) =>
+                        setCreateData({
+                          ...createData,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                      placeholder="+91 98765 43210"
+                      className={inputCls}
+                    />
                   </div>
                 </div>
                 <div>
                   <label className={labelCls}>Email</label>
-                  <input type="email" value={createData.email}
-                    onChange={(e) => setCreateData({ ...createData, email: e.target.value })}
-                    placeholder="optional@email.com" className={inputCls} />
+                  <input
+                    type="email"
+                    value={createData.email}
+                    onChange={(e) =>
+                      setCreateData({ ...createData, email: e.target.value })
+                    }
+                    placeholder="optional@email.com"
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>Address / Location</label>
-                  <input type="text" value={createData.address}
-                    onChange={(e) => setCreateData({ ...createData, address: e.target.value })}
-                    placeholder="City, area…" className={inputCls} />
+                  <input
+                    type="text"
+                    value={createData.address}
+                    onChange={(e) =>
+                      setCreateData({ ...createData, address: e.target.value })
+                    }
+                    placeholder="City, area…"
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>Requirements</label>
-                  <input type="text" value={createData.requirements}
-                    onChange={(e) => setCreateData({ ...createData, requirements: e.target.value })}
-                    placeholder="e.g. 5kW rooftop" className={inputCls} />
+                  <input
+                    type="text"
+                    value={createData.requirements}
+                    onChange={(e) =>
+                      setCreateData({
+                        ...createData,
+                        requirements: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. 5kW rooftop"
+                    className={inputCls}
+                  />
                 </div>
 
                 <AssignSelect
                   isAdmin={canAssign}
                   value={createData.assignedToId}
-                  onChange={(v) => setCreateData({ ...createData, assignedToId: v })}
+                  onChange={(v) =>
+                    setCreateData({ ...createData, assignedToId: v })
+                  }
                   staffUsers={staffUsers}
                   onSearch={setStaffSearch}
                   isLoading={staffFetching}
@@ -534,26 +666,46 @@ const Leads = () => {
 
                 <div>
                   <label className={labelCls}>Initial Notes</label>
-                  <textarea rows="3" value={createData.notes}
-                    onChange={(e) => setCreateData({ ...createData, notes: e.target.value })}
-                    placeholder="Any additional context…" className={inputCls} />
+                  <textarea
+                    rows="3"
+                    value={createData.notes}
+                    onChange={(e) =>
+                      setCreateData({ ...createData, notes: e.target.value })
+                    }
+                    placeholder="Any additional context…"
+                    className={inputCls}
+                  />
                 </div>
 
-                <ModalFooter onCancel={handleCloseModal} isLoading={isCreating} submitLabel="Save Lead" submitColor="bg-green-600 hover:bg-green-700" />
+                <ModalFooter
+                  onCancel={handleCloseModal}
+                  isLoading={isCreating}
+                  submitLabel="Save Lead"
+                  submitColor="bg-green-600 hover:bg-green-700"
+                />
               </form>
             )}
 
             {/* ── UPDATE STATUS ── */}
             {activeModal === "UPDATE_STATUS" && (
-              <form onSubmit={handleUpdateSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+              <form
+                onSubmit={handleUpdateSubmit}
+                className="p-5 space-y-4 overflow-y-auto flex-1"
+              >
                 <div>
                   <label className={labelCls}>Status</label>
-                  <select value={updateData.status}
-                    onChange={(e) => setUpdateData({ ...updateData, status: e.target.value })}
-                    className={inputCls}>
+                  <select
+                    value={updateData.status}
+                    onChange={(e) =>
+                      setUpdateData({ ...updateData, status: e.target.value })
+                    }
+                    className={inputCls}
+                  >
                     <option value="NEW">New</option>
                     <option value="CONTACTED">Contacted</option>
-                    <option value="INTERESTED">In Progress (Site Visit / Quote)</option>
+                    <option value="INTERESTED">
+                      In Progress (Site Visit / Quote)
+                    </option>
                     <option value="CONVERTED">Won (Converted)</option>
                     <option value="NOT_INTERESTED">Lost</option>
                   </select>
@@ -562,28 +714,49 @@ const Leads = () => {
                 <AssignSelect
                   isAdmin={canAssign}
                   value={updateData.assignedToId}
-                  onChange={(v) => setUpdateData({ ...updateData, assignedToId: v })}
+                  onChange={(v) =>
+                    setUpdateData({ ...updateData, assignedToId: v })
+                  }
                   staffUsers={staffUsers}
                   onSearch={setStaffSearch}
                   isLoading={staffFetching}
                   label="Reassign Lead"
                 />
 
-                <ModalFooter onCancel={handleCloseModal} isLoading={isUpdating} submitLabel="Update Lead" submitColor="bg-green-600 hover:bg-green-700" />
+                <ModalFooter
+                  onCancel={handleCloseModal}
+                  isLoading={isUpdating}
+                  submitLabel="Update Lead"
+                  submitColor="bg-green-600 hover:bg-green-700"
+                />
               </form>
             )}
 
             {/* ── ADD FOLLOW-UP ── */}
             {activeModal === "ADD_FOLLOWUP" && (
-              <form onSubmit={handleFollowUpSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+              <form
+                onSubmit={handleFollowUpSubmit}
+                className="p-5 space-y-4 overflow-y-auto flex-1"
+              >
                 <div className="text-sm text-gray-500 dark:text-gray-400 -mt-1">
-                  For: <span className="font-semibold text-gray-800 dark:text-white">{selectedLead?.customerName}</span>
+                  For:{" "}
+                  <span className="font-semibold text-gray-800 dark:text-white">
+                    {selectedLead?.customerName}
+                  </span>
                 </div>
                 <div>
                   <label className={labelCls}>Contact Method *</label>
-                  <select required value={followUpData.method}
-                    onChange={(e) => setFollowUpData({ ...followUpData, method: e.target.value })}
-                    className={inputCls}>
+                  <select
+                    required
+                    value={followUpData.method}
+                    onChange={(e) =>
+                      setFollowUpData({
+                        ...followUpData,
+                        method: e.target.value,
+                      })
+                    }
+                    className={inputCls}
+                  >
                     <option value="PHONE_CALL">📞 Phone Call</option>
                     <option value="WHATSAPP">💬 WhatsApp</option>
                     <option value="EMAIL">✉️ Email</option>
@@ -592,17 +765,42 @@ const Leads = () => {
                 </div>
                 <div>
                   <label className={labelCls}>Remarks / Notes *</label>
-                  <textarea required rows="4" value={followUpData.remarks}
-                    onChange={(e) => setFollowUpData({ ...followUpData, remarks: e.target.value })}
-                    placeholder="What was discussed? Any commitments made?" className={inputCls} />
+                  <textarea
+                    required
+                    rows="4"
+                    value={followUpData.remarks}
+                    onChange={(e) =>
+                      setFollowUpData({
+                        ...followUpData,
+                        remarks: e.target.value,
+                      })
+                    }
+                    placeholder="What was discussed? Any commitments made?"
+                    className={inputCls}
+                  />
                 </div>
                 <div>
-                  <label className={labelCls}>Next Follow-up Date (Optional)</label>
-                  <input type="date" value={followUpData.nextFollowUpDate}
-                    onChange={(e) => setFollowUpData({ ...followUpData, nextFollowUpDate: e.target.value })}
-                    className={inputCls} />
+                  <label className={labelCls}>
+                    Next Follow-up Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={followUpData.nextFollowUpDate}
+                    onChange={(e) =>
+                      setFollowUpData({
+                        ...followUpData,
+                        nextFollowUpDate: e.target.value,
+                      })
+                    }
+                    className={inputCls}
+                  />
                 </div>
-                <ModalFooter onCancel={handleCloseModal} isLoading={isFollowingUp} submitLabel="Log Activity" submitColor="bg-blue-600 hover:bg-blue-700" />
+                <ModalFooter
+                  onCancel={handleCloseModal}
+                  isLoading={isFollowingUp}
+                  submitLabel="Log Activity"
+                  submitColor="bg-blue-600 hover:bg-blue-700"
+                />
               </form>
             )}
           </div>
@@ -619,11 +817,19 @@ export default Leads;
 const ActionButton = ({ href, onClick, title, hoverColor, children }) => {
   const cls = `w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 ${hoverColor} transition-colors`;
   return href ? (
-    <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" title={title} className={cls}>
+    <a
+      href={href}
+      target={href.startsWith("http") ? "_blank" : undefined}
+      rel="noopener noreferrer"
+      title={title}
+      className={cls}
+    >
       {children}
     </a>
   ) : (
-    <button type="button" onClick={onClick} title={title} className={cls}>{children}</button>
+    <button type="button" onClick={onClick} title={title} className={cls}>
+      {children}
+    </button>
   );
 };
 
@@ -638,7 +844,15 @@ const MobileActionBtn = ({ href, label, color, children }) => (
   </a>
 );
 
-const AssignSelect = ({ isAdmin, value, onChange, staffUsers, onSearch, isLoading, label = "Assign To" }) => (
+const AssignSelect = ({
+  isAdmin,
+  value,
+  onChange,
+  staffUsers,
+  onSearch,
+  isLoading,
+  label = "Assign To",
+}) => (
   <div className={!isAdmin ? "opacity-60 pointer-events-none" : ""}>
     <SearchAutocomplete
       items={staffUsers}
@@ -647,7 +861,9 @@ const AssignSelect = ({ isAdmin, value, onChange, staffUsers, onSearch, isLoadin
       onSearch={onSearch}
       isLoading={isLoading}
       label={`${label} ${!isAdmin ? "(Restricted)" : ""}`}
-      placeholder={isAdmin ? "Search staff by name..." : "You cannot assign staff"}
+      placeholder={
+        isAdmin ? "Search staff by name..." : "You cannot assign staff"
+      }
       selectedTheme="neutral"
       disabled={!isAdmin}
       renderItem={(staff, isSelected) =>
@@ -655,24 +871,36 @@ const AssignSelect = ({ isAdmin, value, onChange, staffUsers, onSearch, isLoadin
           `${staff.name} (${staff.department?.name || staff.department || staff.role})`
         ) : (
           <div className="flex flex-col">
-            <span className="font-semibold text-gray-900 dark:text-white">{staff.name}</span>
-            <span className="text-xs text-gray-500">{staff.department?.name || staff.department || staff.role}</span>
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {staff.name}
+            </span>
+            <span className="text-xs text-gray-500">
+              {staff.department?.name || staff.department || staff.role}
+            </span>
           </div>
         )
       }
-      searchFilter={(staff, term) => (staff.name || "").toLowerCase().includes(term.toLowerCase())}
+      searchFilter={(staff, term) =>
+        (staff.name || "").toLowerCase().includes(term.toLowerCase())
+      }
     />
   </div>
 );
 
 const ModalFooter = ({ onCancel, isLoading, submitLabel, submitColor }) => (
   <div className="flex justify-end gap-3 pt-2 pb-1">
-    <button type="button" onClick={onCancel}
-      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface transition-colors">
+    <button
+      type="button"
+      onClick={onCancel}
+      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface transition-colors"
+    >
       Cancel
     </button>
-    <button type="submit" disabled={isLoading}
-      className={`px-5 py-2 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-60 ${submitColor}`}>
+    <button
+      type="submit"
+      disabled={isLoading}
+      className={`px-5 py-2 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-60 ${submitColor}`}
+    >
       {isLoading ? "Saving…" : submitLabel}
     </button>
   </div>

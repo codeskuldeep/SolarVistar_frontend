@@ -21,7 +21,11 @@ export const leadsApi = baseApi.injectEndpoints({
             ]
           : [{ type: "Lead", id: "LIST" }],
     }),
-
+    getLeadById: builder.query({
+      query: (id) => '/leads/${id}',
+      transformResponse: (response) => response.data.lead,
+      providesTags: (_result, _error, id) => [{ type: "Lead", id }],  
+    }),
     // POST /leads
     createLead: builder.mutation({
       query: (leadData) => ({
@@ -66,6 +70,7 @@ export const leadsApi = baseApi.injectEndpoints({
 
 export const {
   useGetLeadsQuery,
+  useGetLeadByIdQuery,
   useCreateLeadMutation,
   useUpdateLeadStatusMutation,
   useAddFollowUpMutation,

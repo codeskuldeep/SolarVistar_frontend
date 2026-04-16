@@ -2,7 +2,7 @@ import { useSelector } from 'react-redux';
 import AdminDashboard from './AdminDashboard';
 import SalesDashboard from './SalesDashboard';
 import InstallationDashboard from './InstallationDashboard';
-import MaintenanceDashboard from './MaintenanceDashboard';
+import SupportDashboard from './SupportDashboard';
 
 const Overview = () => {
   const { user, isLoading } = useSelector((state) => state.auth);
@@ -29,8 +29,8 @@ const Overview = () => {
       return <SalesDashboard />;
     case 'INSTALLATION':
       return <InstallationDashboard />;
-    case 'MAINTENANCE':
-      return <MaintenanceDashboard />;
+    case 'SUPPORT':
+      return <SupportDashboard />;
     default:
       return (
         <div className="p-8 text-center bg-white dark:bg-dark-surface rounded-lg border border-gray-200 dark:border-dark-border">

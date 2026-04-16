@@ -1,17 +1,9 @@
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchVisits } from '../../context/slices/visitSlice';
 import { Wrench, CheckCircle, MapPin, Clock } from '@phosphor-icons/react';
+import { useGetVisitsQuery } from '../../context/api/visitsApi';
 
 export default function InstallationDashboard() {
-  const dispatch = useDispatch();
-  const { visits, isLoading } = useSelector((state) => state.visits);
-
-  useEffect(() => {
-    if (!isLoading) {
-      dispatch(fetchVisits({ page: 1, limit: 50 }));
-    }
-  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data, isLoading } = useGetVisitsQuery({ page: 1, limit: 50 });
+  const visits = data?.visits || [];
 
   // KPI Calculations
   const pendingJobs = visits?.filter((visit) => visit.status === 'PENDING').length || 0;
