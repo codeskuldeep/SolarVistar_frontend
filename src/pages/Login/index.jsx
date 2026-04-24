@@ -9,15 +9,78 @@ import {
   WarningCircle,
   Sun,
   Moon,
-  SolarPanel
+  SolarPanel,
+  EnvelopeSimple,
+  Lock,
 } from '@phosphor-icons/react';
 
+// ── Validation helpers ───────────────────────────────────────────────────────
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validate = (email, password) => {
+  const errors = {};
+  if (!email) {
+    errors.email = 'Email is required.';
+  } else if (!emailRegex.test(email)) {
+    errors.email = 'Please enter a valid email address.';
+  }
+  if (!password) {
+    errors.password = 'Password is required.';
+  } else if (password.length < 6) {
+    errors.password = 'Password must be at least 6 characters.';
+  }
+  return errors;
+};
+
+// ── Input component ──────────────────────────────────────────────────────────
+const Field = ({ id, label, type, value, onChange, onBlur, error, placeholder, icon: Icon, rightSlot }) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+      {label}
+    </label>
+    <div className="relative">
+      {Icon && (
+        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <Icon size={16} className={error ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'} />
+        </div>
+      )}
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        className={`block w-full ${Icon ? 'pl-9' : 'pl-3'} ${rightSlot ? 'pr-10' : 'pr-3'} py-2.5 bg-white dark:bg-dark-bg border rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 sm:text-sm transition-colors
+          ${error
+            ? 'border-red-400 dark:border-red-600 focus:ring-red-400/20 focus:border-red-400'
+            : 'border-gray-300 dark:border-dark-border focus:ring-blue-500/20 focus:border-blue-500 dark:focus:ring-blue-400/20 dark:focus:border-blue-400'
+          }`}
+      />
+      {rightSlot && (
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          {rightSlot}
+        </div>
+      )}
+    </div>
+    {error && (
+      <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+        <WarningCircle size={12} weight="fill" />
+        {error}
+      </p>
+    )}
+  </div>
+);
+
+// ── Main Component ───────────────────────────────────────────────────────────
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const [submitted, setSubmitted] = useState(false);
   
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -36,13 +99,21 @@ const Login = () => {
     if (isAuthenticated) navigate('/dashboard');
   }, [isAuthenticated, navigate]);
 
+  // Clear server error when user starts typing
   useEffect(() => {
     if (error) dispatch(clearError());
   }, [email, password, dispatch]);
 
+  const errors = validate(email, password);
+  const showErrors = (field) => touched[field] || submitted;
+
+  const handleBlur = (field) => setTouched((prev) => ({ ...prev, [field]: true }));
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email && password) dispatch(loginUser({ email, password }));
+    setSubmitted(true);
+    if (Object.keys(errors).length > 0) return; // block if client errors
+    dispatch(loginUser({ email: email.trim(), password }));
   };
 
   return (
@@ -83,81 +154,72 @@ const Login = () => {
         {/* Main Card */}
         <div className="bg-white dark:bg-dark-surface py-8 px-6 sm:px-8 rounded-xl border border-gray-200 dark:border-dark-border transition-colors">
           
-          {/* Error State */}
+          {/* Server Error */}
           {error && (
-            <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 p-3 rounded-lg flex items-start">
-              <WarningCircle size={20} className="text-red-600 dark:text-red-400 mt-0.5 mr-2 flex-shrink-0" weight="fill" />
+            <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 p-3 rounded-lg flex items-start gap-2">
+              <WarningCircle size={18} className="text-red-600 dark:text-red-400 mt-0.5 shrink-0" weight="fill" />
               <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             
-            {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:ring-blue-400/20 dark:focus:border-blue-400 sm:text-sm transition-colors"
-                placeholder="name@solarvistar.com"
-              />
-            </div>
+            <Field
+              id="email"
+              label="Email Address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => handleBlur('email')}
+              error={showErrors('email') ? errors.email : null}
+              placeholder="name@solarvistar.com"
+              icon={EnvelopeSimple}
+            />
 
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-3 pr-10 py-2.5 bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:ring-blue-400/20 dark:focus:border-blue-400 sm:text-sm transition-colors"
-                  placeholder="••••••••"
-                />
+            <Field
+              id="password"
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => handleBlur('password')}
+              error={showErrors('password') ? errors.password : null}
+              placeholder="••••••••"
+              icon={Lock}
+              rightSlot={
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  tabIndex={-1}
                 >
                   {showPassword ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
-              </div>
-            </div>
+              }
+            />
 
             {/* Utility Row */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded-sm border-gray-300 dark:border-dark-border text-green-600 dark:text-green-500 focus:ring-blue-500 dark:focus:ring-blue-400 bg-transparent cursor-pointer"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                  Remember me
-                </label>
-              </div>
+            <div className="flex items-center pt-1">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded-sm border-gray-300 dark:border-dark-border text-green-600 focus:ring-green-500 bg-transparent cursor-pointer"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                Remember me
+              </label>
             </div>
 
-            {/* Primary Action Button */}
-            <div className="pt-2">
+            {/* Submit */}
+            <div className="pt-1">
               <button
                 type="submit"
                 disabled={isLoading}
                 className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-dark-bg disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
               >
-                {isLoading ? 'Authenticating...' : 'Sign In'}
+                {isLoading ? 'Authenticating…' : 'Sign In'}
               </button>
             </div>
           </form>

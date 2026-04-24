@@ -26,6 +26,7 @@ import {
 import { MobileCardSkeleton } from "../../components/ui/Skeletons";
 import Pagination from "../../components/ui/Pagination";
 import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
+import QuotationsDrawer from "../../components/ui/QuotationsDrawer";
 
 /* ─── Status config ─── */
 const STATUS_CONFIG = {
@@ -72,7 +73,7 @@ const Leads = () => {
   const isAdmin = currentUser?.role === "ADMIN";
   const canAssign = isAdmin || currentUser?.department?.name === "Sales";
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
+  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
 
   // ── Table search state ──
   const [searchTerm, setSearchTerm] = useState("");
@@ -86,6 +87,7 @@ const Leads = () => {
   // ── Modal state ──
   const [activeModal, setActiveModal] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [quotesLead, setQuotesLead] = useState(null);
   const [createData, setCreateData] = useState({
     customerName: "",
     phoneNumber: "",
@@ -393,6 +395,21 @@ const Leads = () => {
                   {/* Actions */}
                   <div className="flex items-center gap-1.5">
                     <ActionButton
+                      title="View Profile"
+                      hoverColor="hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      onClick={() => navigate(`/leads/${lead.id}/profile`)}
+                    >
+                      <UserIcon size={17} />
+                    </ActionButton>
+                    {/* Quotation drawer button */}
+                    <ActionButton
+                      title="View / Add Quotations"
+                      hoverColor="hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                      onClick={() => setQuotesLead(lead)}
+                    >
+                      <ReceiptIcon size={17} />
+                    </ActionButton>
+                    <ActionButton
                       href={`https://wa.me/${phone}`}
                       title="WhatsApp"
                       hoverColor="hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
@@ -501,6 +518,13 @@ const Leads = () => {
                   </MobileActionBtn>
 
                   <div className="flex-1" />
+
+                  <button
+                    onClick={() => navigate(`/leads/${lead.id}/profile`)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 transition-colors whitespace-nowrap"
+                  >
+                    <UserIcon size={13} /> Profile
+                  </button>
 
                   {!isReadOnly && (
                     <>
@@ -805,6 +829,16 @@ const Leads = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Quotations Drawer */}
+      {quotesLead && (
+        <QuotationsDrawer
+          leadId={quotesLead.id}
+          title={quotesLead.customerName}
+          subtitle={quotesLead.phoneNumber}
+          onClose={() => setQuotesLead(null)}
+        />
       )}
     </div>
   );

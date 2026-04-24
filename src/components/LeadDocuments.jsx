@@ -10,11 +10,11 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import { useGetLeadByIdQuery, useGetLeadsQuery } from "../context/api/leadsApi";
 
 const DOCUMENT_CHECKLIST = [
-  { category: "AADHAR", label: "Aadhaar Card", hint: "Government-issued ID proof" },
+  { category: "AADHAR", label: "Aadhar Card", hint: "Government-issued ID proof" },
   { category: "PAN_CARD", label: "PAN Card", hint: "Tax identification document" },
-  { category: "ELECTRICITY_BILL", label: "Electricity Bill", hint: "Latest 1–2 months" },
-  { category: "PROPERTY_TAX", label: "Property Tax Receipt", hint: "Most recent year" },
-  { category: "ROOF_PHOTO", label: "Roof Photograph", hint: "Clear daylight image" },
+  { category: "BANK_PASSBOOK", label: "Bank Passbook", hint: "Financial detail" },
+  { category: "PROPERTY_DOC", label: "Property Documents (Registry / Tax Document)", hint: "Ownership proof" },
+  { category: "ELECTRICITY_BILL", label: "Electricity Bill", hint: "Must be in PDF format", accept: "application/pdf" },
 ];
 
 const formatBytes = (bytes = 0) => {
@@ -34,7 +34,7 @@ const Spinner = () => (
 const LeadDocuments = () => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
+  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
 
   const leadId = useParams().customerId;
   const navigate = useNavigate();
@@ -77,6 +77,14 @@ const LeadDocuments = () => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+
+    if (category === "ELECTRICITY_BILL" && file.type !== "application/pdf") {
+      setRowError((e) => ({
+        ...e,
+        [category]: "Electricity Bill must be in PDF format.",
+      }));
+      return;
+    }
 
     setRowError((e) => ({ ...e, [category]: null }));
     setBusyCategory(category);
@@ -304,7 +312,7 @@ const LeadDocuments = () => {
                         type="file"
                         className="hidden"
                         onChange={(e) => handleFileSelected(category, e)}
-                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                        accept={category === "ELECTRICITY_BILL" ? ".pdf,application/pdf" : ".pdf,.jpg,.jpeg,.png,.webp"}
                         aria-label={`Upload ${label}`}
                       />
 

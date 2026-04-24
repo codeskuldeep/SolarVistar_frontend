@@ -19,10 +19,14 @@ import {
   CheckSquareOffsetIcon,
   MagnifyingGlassIcon,
   XIcon,
+  ImagesIcon,
+  ReceiptIcon,
 } from "@phosphor-icons/react";
 import { TableSkeleton } from "../../components/ui/Skeletons";
 import Pagination from "../../components/ui/Pagination";
 import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
+import SitePhotoModal from "../../components/ui/SitePhotoModal";
+import VisitQuotationsDrawer from "../../components/ui/VisitQuotationsDrawer";
 
 const QuickLeadModal = ({ onClose, onCreated }) => {
   const [formData, setFormData] = useState({ customerName: "", phoneNumber: "" });
@@ -79,7 +83,7 @@ const Visits = () => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const canAssign = currentUser?.role === "ADMIN" || currentUser?.department?.name === "Sales";
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
+  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
 
   // ── Table search ──
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,6 +100,8 @@ const Visits = () => {
   const [activeModal, setActiveModal] = useState(null);
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [showQuickLead, setShowQuickLead] = useState(false);
+  const [photoVisit, setPhotoVisit] = useState(null);
+  const [quotesVisit, setQuotesVisit] = useState(null);
 
   const [createData, setCreateData] = useState({
     customerName: "", phoneNumber: "", address: "",
@@ -266,6 +272,11 @@ const Visits = () => {
                         <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full mb-2 ${getStatusStyle(visit.status || "SCHEDULED")}`}>
                           {(visit.status || "SCHEDULED").replace("_", " ")}
                         </span>
+                        {visit.updatedAt && (
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500 mb-2">
+                            Updated: {new Date(visit.updatedAt).toLocaleDateString()} {new Date(visit.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
                         <div className="flex items-start text-xs text-gray-500 dark:text-gray-400 mt-2">
                           <UserIcon size={16} weight="regular" className="mr-1.5 mt-0.5" />
                           {visit.assignedStaff?.name ? (
@@ -283,27 +294,52 @@ const Visits = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {!isReadOnly && (
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Quotations button */}
                           <button
-                            onClick={() => {
-                              setSelectedVisit(visit);
-                              setUpdateData({
-                                status: visit.status || "SCHEDULED",
-                                comments: visit.comments || "",
-                                customerFeedback: visit.customerFeedback || "",
-                                workCompleted: visit.workCompleted || "",
-                                issuesIdentified: visit.issuesIdentified || "",
-                                nextSteps: visit.nextSteps || "",
-                                assignedStaffId: visit.assignedStaffId || "",
-                              });
-                              setActiveModal("UPDATE");
-                            }}
-                            className="text-gray-500 hover:text-green-600 transition-colors"
-                            title="Update Visit & Log Notes"
+                            onClick={() => setQuotesVisit(visit)}
+                            title={visit.leadId ? "View / Add Quotations" : "Link this visit to a lead to add quotations"}
+                            className={`transition-colors ${
+                              visit.leadId
+                                ? "text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                                : "text-gray-200 dark:text-gray-700 cursor-not-allowed"
+                            }`}
+                            disabled={!visit.leadId}
                           >
-                            <CheckSquareOffsetIcon size={20} weight="regular" />
+                            <ReceiptIcon size={20} weight="regular" />
                           </button>
-                        )}
+
+                          {/* Site Photos button — visible to all authenticated users */}
+                          <button
+                            onClick={() => setPhotoVisit(visit)}
+                            className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            title="Upload Site Photos"
+                          >
+                            <ImagesIcon size={20} weight="regular" />
+                          </button>
+
+                          {!isReadOnly && (
+                            <button
+                              onClick={() => {
+                                setSelectedVisit(visit);
+                                setUpdateData({
+                                  status: visit.status || "SCHEDULED",
+                                  comments: visit.comments || "",
+                                  customerFeedback: visit.customerFeedback || "",
+                                  workCompleted: visit.workCompleted || "",
+                                  issuesIdentified: visit.issuesIdentified || "",
+                                  nextSteps: visit.nextSteps || "",
+                                  assignedStaffId: visit.assignedStaffId || "",
+                                });
+                                setActiveModal("UPDATE");
+                              }}
+                              className="text-gray-500 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                              title="Update Visit & Log Notes"
+                            >
+                              <CheckSquareOffsetIcon size={20} weight="regular" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -379,6 +415,12 @@ const Visits = () => {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Visit Date & Time *</label>
                       <input type="datetime-local" required value={createData.visitDatetime}
                         onChange={(e) => setCreateData({ ...createData, visitDatetime: e.target.value })}
+                        className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address*</label>
+                      <input type="text" required value={createData.address}
+                        onChange={(e) => setCreateData({ ...createData, address: e.target.value })}
                         className={inputCls} />
                     </div>
 
@@ -516,6 +558,22 @@ const Visits = () => {
             setCreateData((prev) => ({ ...prev, leadId: id }));
             setShowQuickLead(false);
           }}
+        />
+      )}
+
+      {/* Site Photos Modal */}
+      {photoVisit && (
+        <SitePhotoModal
+          visit={photoVisit}
+          onClose={() => setPhotoVisit(null)}
+        />
+      )}
+
+      {/* Quotations Drawer */}
+      {quotesVisit && (
+        <VisitQuotationsDrawer
+          visit={quotesVisit}
+          onClose={() => setQuotesVisit(null)}
         />
       )}
 

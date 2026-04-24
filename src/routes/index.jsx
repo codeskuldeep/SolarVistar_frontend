@@ -10,6 +10,8 @@ import QuotationManager from "../pages/Quotations";
 import ExistingCustomers from "../pages/Customers";
 import LeadDocuments from "../components/LeadDocuments";
 import Profile from "../pages/Profile";
+import LeadProfile from "../pages/LeadProfile";
+
 export const router = createBrowserRouter([
   {
     path: "/login",
@@ -54,6 +56,14 @@ export const router = createBrowserRouter([
           {
             path: "customers/:customerId/documents",
             element: <LeadDocuments />,
+          },
+          {
+            path: "leads/:id/profile",
+            element: <LeadProfile />,
+          },
+          {
+            path: "customers/:id/profile",
+            element: <LeadProfile />,
           },
           {
             path: "profile",
