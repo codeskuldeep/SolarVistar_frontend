@@ -26,6 +26,19 @@ export const quotationsApi = baseApi.injectEndpoints({
           : [{ type: "Quotation", id: "LIST" }],
     }),
 
+    // GET /quotations?leadId=... — scoped query for the visit quotations drawer
+    getLeadQuotations: builder.query({
+      query: (leadId) => ({
+        url: "/quotations",
+        params: { leadId, limit: 50 },
+      }),
+      transformResponse: (response) => response.data.quotations ?? [],
+      providesTags: (_result, _error, leadId) => [
+        { type: "LeadQuotations", id: leadId },
+        "LeadQuotations",
+      ],
+    }),
+
     // GET /quotations/:id
     getQuotationById: builder.query({
       query: (id) => `/quotations/${id}`,
@@ -41,7 +54,11 @@ export const quotationsApi = baseApi.injectEndpoints({
         body: quotationData,
       }),
       transformResponse: (response) => response.data.quotation,
-      invalidatesTags: [{ type: "Quotation", id: "LIST" }],
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "Quotation", id: "LIST" },
+        { type: "LeadQuotations", id: arg?.leadId },
+        "LeadQuotations",
+      ],
     }),
 
     // PUT /quotations/:id
@@ -55,6 +72,7 @@ export const quotationsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Quotation", id },
         { type: "Quotation", id: "LIST" },
+        "LeadQuotations",
       ],
     }),
 
@@ -67,6 +85,7 @@ export const quotationsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: "Quotation", id },
         { type: "Quotation", id: "LIST" },
+        "LeadQuotations",
       ],
     }),
   }),
@@ -75,6 +94,7 @@ export const quotationsApi = baseApi.injectEndpoints({
 
 export const {
   useGetQuotationsQuery,
+  useGetLeadQuotationsQuery,
   useGetQuotationByIdQuery,
   useCreateQuotationMutation,
   useUpdateQuotationMutation,

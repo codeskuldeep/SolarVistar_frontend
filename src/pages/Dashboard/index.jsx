@@ -25,11 +25,11 @@ const Overview = () => {
   const dept = (user.department?.name || user.department || '').toUpperCase();
 
   switch (dept) {
-    case 'SALES':
+    case 'SALES DEPARTMENT':
       return <SalesDashboard />;
-    case 'INSTALLATION':
+    case 'INSTALLATION & MAINTENANCE DEPARTMENT':
       return <InstallationDashboard />;
-    case 'SUPPORT':
+    case 'OPERATIONS DEPARTMENT':
       return <SupportDashboard />;
     default:
       return (

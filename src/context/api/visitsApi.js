@@ -4,9 +4,9 @@ export const visitsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // GET /visits — paginated + searchable
     getVisits: builder.query({
-      query: ({ page = 1, limit = 10, search = "" } = {}) => ({
+      query: ({ page = 1, limit = 10, search = "", leadId = null } = {}) => ({
         url: "/visits",
-        params: { page, limit, ...(search ? { search } : {}) },
+        params: { page, limit, ...(search ? { search } : {}), ...(leadId ? { leadId } : {}) },
       }),
       transformResponse: (response) => ({
         visits: response.data.visits,

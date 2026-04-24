@@ -30,17 +30,30 @@ import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
 export default function QuotationManager() {
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
+  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlLeadId = searchParams.get("leadId");
+  const urlQuoteId = searchParams.get("quoteId");
 
-  const [view, setView] = useState(urlLeadId ? "create" : "list");
-  const [selectedQuoteId, setSelectedQuoteId] = useState(null);
+  const [view, setView] = useState(
+    urlQuoteId ? "view" : urlLeadId ? "create" : "list"
+  );
+  const [selectedQuoteId, setSelectedQuoteId] = useState(urlQuoteId || null);
 
-  const handleView = (id) => { setSelectedQuoteId(id); setView("view"); };
+  const handleView = (id) => {
+    setSelectedQuoteId(id);
+    setView("view");
+  };
   const handleCancelForm = () => {
-    if (urlLeadId) { searchParams.delete("leadId"); setSearchParams(searchParams); }
+    if (urlLeadId) {
+      searchParams.delete("leadId");
+      setSearchParams(searchParams);
+    }
+    if (urlQuoteId) {
+      searchParams.delete("quoteId");
+      setSearchParams(searchParams);
+    }
     setView("list");
   };
 
@@ -76,7 +89,7 @@ export default function QuotationManager() {
           <QuotationForm initialLeadId={urlLeadId} onCancel={handleCancelForm} onSuccess={handleCancelForm} />
         )}
         {view === "view" && (
-          <QuotationViewer quoteId={selectedQuoteId} onBack={() => setView("list")} />
+          <QuotationViewer quoteId={selectedQuoteId} onBack={handleCancelForm} />
         )}
       </main>
     </div>
@@ -273,18 +286,39 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const submissionData = {
-      ...formData,
-      numberOfPanels: formData.numberOfPanels ? parseInt(formData.numberOfPanels, 10) : undefined,
-      panelWarrantyYears: formData.panelWarrantyYears ? parseInt(formData.panelWarrantyYears, 10) : undefined,
-      loadKw: formData.loadKw ? parseFloat(formData.loadKw) : undefined,
-      inverterSizeKw: formData.inverterSizeKw ? parseFloat(formData.inverterSizeKw) : undefined,
-      inverterWarrantyYears: formData.inverterWarrantyYears ? parseInt(formData.inverterWarrantyYears, 10) : undefined,
-      dcCableSqMm: formData.dcCableSqMm ? parseFloat(formData.dcCableSqMm) : undefined,
-      acCableSqMm: formData.acCableSqMm ? parseFloat(formData.acCableSqMm) : undefined,
-      quotationValue: formData.quotationValue ? parseFloat(formData.quotationValue) : undefined,
-      subsidy: formData.subsidy ? parseFloat(formData.subsidy) : undefined,
-    };
+
+    // Only include fields that Prisma accepts — strip out id, lead relation, timestamps, etc.
+    const editableFields = [
+      "panelType", "panelName", "panelSizeWatt", "numberOfPanels",
+      "panelWarrantyYears", "loadKw", "structure", "inverterSizeKw",
+      "inverterWarrantyYears", "acWire", "dcWire", "acdbCompany",
+      "dcdbCompany", "dcCableSqMm", "acCableSqMm", "quotationValue",
+      "subsidy", "dcrStatus",
+    ];
+
+    const submissionData = editableFields.reduce((acc, key) => {
+      const val = formData[key];
+      if (val !== "" && val !== null && val !== undefined) {
+        acc[key] = val;
+      } else {
+        acc[key] = null; // explicitly null to clear optional fields
+      }
+      return acc;
+    }, {});
+
+    // Parse numeric fields
+    if (submissionData.numberOfPanels)      submissionData.numberOfPanels      = parseInt(submissionData.numberOfPanels, 10);
+    if (submissionData.panelWarrantyYears)  submissionData.panelWarrantyYears  = parseInt(submissionData.panelWarrantyYears, 10);
+    if (submissionData.inverterWarrantyYears) submissionData.inverterWarrantyYears = parseInt(submissionData.inverterWarrantyYears, 10);
+    if (submissionData.loadKw)              submissionData.loadKw              = parseFloat(submissionData.loadKw);
+    if (submissionData.inverterSizeKw)      submissionData.inverterSizeKw      = parseFloat(submissionData.inverterSizeKw);
+    if (submissionData.dcCableSqMm)         submissionData.dcCableSqMm         = parseFloat(submissionData.dcCableSqMm);
+    if (submissionData.acCableSqMm)         submissionData.acCableSqMm         = parseFloat(submissionData.acCableSqMm);
+    if (submissionData.quotationValue)      submissionData.quotationValue      = parseFloat(submissionData.quotationValue);
+    if (submissionData.subsidy)             submissionData.subsidy             = parseFloat(submissionData.subsidy);
+
+    // leadId is only needed for create
+    if (!isEdit) submissionData.leadId = formData.leadId;
 
     let result;
     if (isEdit) {
@@ -442,7 +476,7 @@ const FormSelect = ({ label, name, value, onChange, options, className = "" }) =
 const QuotationViewer = ({ quoteId, onBack }) => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION" || dept === "SUPPORT";
+  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
 
   const [isEditing, setIsEditing] = useState(false);
   const { data } = useGetQuotationsQuery({ limit: 100 }); // fetch all for viewer lookup

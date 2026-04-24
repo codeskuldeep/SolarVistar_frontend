@@ -2,13 +2,15 @@ import React, { useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useGetLeadsQuery } from "../../context/api/leadsApi";
 import { CheckCircle, FileText } from "lucide-react";
+import { ReceiptIcon, UserIcon } from "@phosphor-icons/react";
 import Pagination from "../../components/ui/Pagination";
 import { useNavigate } from "react-router";
 import LeadDocuments from "../../components/LeadDocuments";
+import QuotationsDrawer from "../../components/ui/QuotationsDrawer";
 
 export default function ExistingCustomers() {
   const [page, setPage] = useState(1);
-  const [debouncedSearch] = useDebounce("", 400); // no search input here, but keep pattern consistent
+  const [debouncedSearch] = useDebounce("", 400);
   const navigate = useNavigate();
   const { data, isLoading } = useGetLeadsQuery({
     page,
@@ -19,6 +21,8 @@ export default function ExistingCustomers() {
 
   const existingCustomersList = data?.leads ?? [];
   const meta = data?.meta ?? { totalPages: 1, currentPage: 1, totalItems: 0 };
+
+  const [quotesCustomer, setQuotesCustomer] = useState(null);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= meta.totalPages) setPage(newPage);
@@ -69,7 +73,7 @@ export default function ExistingCustomers() {
                   className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
                     {customer.customerName}
                   </td>
                   <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
@@ -86,12 +90,35 @@ export default function ExistingCustomers() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleDocumentClick(customer.id)}
-                      className="inline-flex items-center text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
-                    >
-                      <FileText className="w-4 h-4 mr-1.5" /> Docs
-                    </button>
+                    <div className="inline-flex items-center gap-3">
+                      {/* Profile button */}
+                      <button
+                        onClick={() => navigate(`/customers/${customer.id}/profile`)}
+                        title="View Profile"
+                        className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-500 dark:hover:text-blue-400 font-medium transition-colors text-sm"
+                      >
+                        <UserIcon size={15} weight="regular" />
+                        Profile
+                      </button>
+
+                      {/* Quotations drawer button */}
+                      <button
+                        onClick={() => setQuotesCustomer(customer)}
+                        title="View / Add Quotations"
+                        className="inline-flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 font-medium transition-colors text-sm"
+                      >
+                        <ReceiptIcon size={15} weight="regular" />
+                        Quotes
+                      </button>
+
+                      {/* Documents button */}
+                      <button
+                        onClick={() => handleDocumentClick(customer.id)}
+                        className="inline-flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium transition-colors"
+                      >
+                        <FileText className="w-4 h-4 mr-1.5" /> Docs
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -105,6 +132,16 @@ export default function ExistingCustomers() {
           itemName="customers"
         />
       </div>
+
+      {/* Quotations Drawer */}
+      {quotesCustomer && (
+        <QuotationsDrawer
+          leadId={quotesCustomer.id}
+          title={quotesCustomer.customerName}
+          subtitle={quotesCustomer.phoneNumber}
+          onClose={() => setQuotesCustomer(null)}
+        />
+      )}
     </div>
   );
 }
