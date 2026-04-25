@@ -1,2 +1,1 @@
-solar vistar frontend ReadMe 
-Teach stack react.js with tailwind css
+Solar Vistar's official GitHub repository.
