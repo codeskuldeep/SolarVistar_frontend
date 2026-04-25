@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useGetLeadByIdQuery } from "../../context/api/leadsApi";
 import { useGetLeadQuotationsQuery } from "../../context/api/quotationsApi";
 import { useGetVisitsQuery } from "../../context/api/visitsApi";
-import { useGetLeadDocumentsQuery } from "../../context/api/documents";
+import { useGetLeadDocumentsQuery, useGetVisitDocumentsQuery } from "../../context/api/documents";
 import {
   User,
   Phone,
@@ -19,6 +19,7 @@ import {
   DownloadSimple,
   CheckCircle,
   CaretRight,
+  ImageIcon,
 } from "@phosphor-icons/react";
 import { useSelector } from "react-redux";
 
@@ -193,24 +194,9 @@ const LeadProfile = () => {
     if (visits.length === 0) return <EmptyState icon={MapTrifold} message="No site visits scheduled yet." />;
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-5">
         {visits.map(visit => (
-          <div key={visit.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors gap-4">
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                {visit.status === 'COMPLETED' ? <CheckCircle className="text-emerald-500" /> : <ClockCounterClockwise className="text-amber-500" />}
-                {visit.purpose}
-              </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Assigned: <span className="font-medium">{visit.assignedStaff?.name || 'Unassigned'}</span>
-              </p>
-            </div>
-            <div className="text-left sm:text-right">
-              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                {new Date(visit.visitDatetime).toLocaleString()}
-              </span>
-            </div>
-          </div>
+          <VisitCard key={visit.id} visit={visit} />
         ))}
       </div>
     );
@@ -342,5 +328,90 @@ const EmptyState = ({ icon: Icon, message }) => (
     <p className="text-sm text-gray-500 dark:text-gray-400">{message}</p>
   </div>
 );
+
+const VisitCard = ({ visit }) => {
+  const { data: photos = [], isLoading } = useGetVisitDocumentsQuery(visit.id);
+
+  const statusColor = {
+    COMPLETED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    PENDING: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    RESCHEDULED: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    CANCELLED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+  }[visit.status] || "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400";
+
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-sm overflow-hidden">
+      {/* Visit header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3">
+        <div className="flex items-start gap-3">
+          <div className={`mt-0.5 p-1.5 rounded-lg ${visit.status === "COMPLETED" ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
+            {visit.status === "COMPLETED"
+              ? <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400" weight="fill" />
+              : <ClockCounterClockwise size={16} className="text-amber-600 dark:text-amber-400" weight="fill" />
+            }
+          </div>
+          <div>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{visit.purpose}</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {new Date(visit.visitDatetime).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+              {visit.assignedStaff?.name && ` · ${visit.assignedStaff.name}`}
+            </p>
+            {visit.siteLocation && (
+              <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <MapPin size={11} weight="fill" className="shrink-0" />
+                {visit.siteLocation}
+              </p>
+            )}
+          </div>
+        </div>
+        <span className={`self-start sm:self-center inline-flex px-2.5 py-1 text-[11px] font-semibold rounded-full ${statusColor}`}>
+          {visit.status}
+        </span>
+      </div>
+
+      {/* Photos gallery */}
+      {isLoading ? (
+        <div className="px-4 pb-4">
+          <div className="grid grid-cols-4 gap-2 animate-pulse">
+            {[1,2,3,4].map(i => <div key={i} className="aspect-square rounded-lg bg-gray-200 dark:bg-slate-700" />)}
+          </div>
+        </div>
+      ) : photos.length > 0 ? (
+        <div className="px-4 pb-4">
+          <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-semibold mb-2">
+            Site Photos ({photos.length})
+          </p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {photos.map(photo => (
+              <a
+                key={photo.id}
+                href={photo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 hover:opacity-80 transition-opacity group relative"
+                title={photo.category?.replace(/_/g, " ")}
+              >
+                <img
+                  src={photo.url}
+                  alt={photo.category}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  onError={(e) => { e.target.style.display = "none"; }}
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                  {photo.category?.replace(/_/g, " ")}
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="px-4 pb-4 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+          <ImageIcon size={13} />
+          No site photos uploaded yet.
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default LeadProfile;

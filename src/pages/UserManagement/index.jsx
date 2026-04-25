@@ -5,6 +5,7 @@ import {
   useGetUsersQuery,
   useCreateUserMutation,
   useDeleteUserMutation,
+  useGetDepartmentsQuery,
 } from "../../context/api/usersApi";
 import { addToast } from "../../context/slices/toastSlice";
 import {
@@ -123,6 +124,8 @@ const Users = () => {
 
   const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
   const [deleteUser] = useDeleteUserMutation();
+
+  const { data: departments = [], isLoading: isLoadingDepartments } = useGetDepartmentsQuery();
 
   const usersList = data?.users ?? [];
   const meta = data?.meta ?? { totalPages: 1, currentPage: 1, totalItems: 0 };
@@ -419,13 +422,17 @@ const Users = () => {
                     value={formData.department}
                     onChange={handleInputChange}
                     onBlur={() => handleBlur("department")}
-                    disabled={formData.role === "ADMIN"}
+                    disabled={formData.role === "ADMIN" || isLoadingDepartments}
                     className={`${inputCls(!!fieldError("department"))} disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-dark-bg/50 dark:disabled:text-gray-600`}
                   >
-                    <option value="" disabled>-- Select --</option>
-                    <option value="Sales Department">Sales Department</option>
-                    <option value="Installation & Maintenance Department">Installation & Maintenance Department</option>
-                    <option value="Operations Department">Operations Department</option>
+                    <option value="" disabled>
+                      {isLoadingDepartments ? "Loading departments..." : "-- Select --"}
+                    </option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
                   </select>
                   <FieldError msg={fieldError("department")} />
                 </div>

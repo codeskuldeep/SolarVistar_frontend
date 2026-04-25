@@ -71,9 +71,15 @@ const Leads = () => {
   const { user: currentUser } = useSelector((state) => state.auth);
 
   const isAdmin = currentUser?.role === "ADMIN";
-  const canAssign = isAdmin || currentUser?.department?.name === "Sales";
-  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
+  const canAssign = isAdmin || currentUser?.department?.name === "Sales Department";
+  const dept = (
+    currentUser?.department?.name ||
+    currentUser?.department ||
+    ""
+  ).toUpperCase();
+  const isReadOnly =
+    dept === "INSTALLATION & MAINTENANCE DEPARTMENT" ||
+    dept === "OPERATIONS DEPARTMENT";
 
   // ── Table search state ──
   const [searchTerm, setSearchTerm] = useState("");
@@ -189,17 +195,19 @@ const Leads = () => {
 
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
-    const result = await updateLeadStatus({
-      id: selectedLead.id,
-      status: updateData.status,
-      assignedToId: updateData.assignedToId || null,
-    });
+    // Only include assignedToId in payload when user explicitly selected someone
+    const payload = { id: selectedLead.id, status: updateData.status };
+    if (updateData.assignedToId) {
+      payload.assignedToId = updateData.assignedToId;
+    }
+    const result = await updateLeadStatus(payload);
     if (!result.error) {
       setActiveModal(null);
       dispatch(
         addToast({ message: "Lead updated successfully", type: "success" }),
       );
     } else {
+      console.error("Lead update failed:", result.error);
       dispatch(
         addToast({
           message: result.error?.data?.message || "Failed to update lead",
@@ -428,7 +436,9 @@ const Leads = () => {
                         <ActionButton
                           title="Create Quotation"
                           hoverColor="hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                          onClick={() => navigate(`/quotations?leadId=${lead.id}`)}
+                          onClick={() =>
+                            navigate(`/quotations?leadId=${lead.id}`)
+                          }
                         >
                           <ReceiptIcon size={17} />
                         </ActionButton>
@@ -439,7 +449,7 @@ const Leads = () => {
                             setSelectedLead(lead);
                             setUpdateData({
                               status: lead.status || "NEW",
-                              assignedToId: lead.assignedToId || "",
+                              assignedToId: "",
                             });
                             setActiveModal("UPDATE_STATUS");
                           }}
@@ -529,7 +539,9 @@ const Leads = () => {
                   {!isReadOnly && (
                     <>
                       <button
-                        onClick={() => navigate(`/quotations?leadId=${lead.id}`)}
+                        onClick={() =>
+                          navigate(`/quotations?leadId=${lead.id}`)
+                        }
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/30 transition-colors whitespace-nowrap"
                       >
                         <ReceiptIcon size={13} /> Quote
@@ -539,7 +551,7 @@ const Leads = () => {
                           setSelectedLead(lead);
                           setUpdateData({
                             status: lead.status || "NEW",
-                            assignedToId: lead.assignedToId || "",
+                            assignedToId: "",
                           });
                           setActiveModal("UPDATE_STATUS");
                         }}
@@ -738,8 +750,10 @@ const Leads = () => {
                 <AssignSelect
                   isAdmin={canAssign}
                   value={updateData.assignedToId}
-                  onChange={(v) =>
+                  onChange={(v) => {
+                    console.log(v)
                     setUpdateData({ ...updateData, assignedToId: v })
+                  }
                   }
                   staffUsers={staffUsers}
                   onSearch={setStaffSearch}
@@ -784,7 +798,6 @@ const Leads = () => {
                     <option value="PHONE_CALL">📞 Phone Call</option>
                     <option value="WHATSAPP">💬 WhatsApp</option>
                     <option value="EMAIL">✉️ Email</option>
-                    <option value="IN_PERSON">🤝 In Person Meeting</option>
                   </select>
                 </div>
                 <div>

@@ -45,6 +45,20 @@ export const visitsApi = baseApi.injectEndpoints({
         { type: "Visit", id: "LIST" },
       ],
     }),
+    // PATCH /visits/:id/location
+    // force=true allows overwriting an already-set location (explicit user action)
+    updateVisitLocation: builder.mutation({
+      query: ({ id, siteLocation, force = false }) => ({
+        url: `/visits/${id}/location`,
+        method: "PATCH",
+        body: { siteLocation, force },
+      }),
+      transformResponse: (response) => response.data.visit,
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Visit", id },
+        { type: "Visit", id: "LIST" },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -53,4 +67,5 @@ export const {
   useGetVisitsQuery,
   useCreateVisitMutation,
   useUpdateVisitMutation,
+  useUpdateVisitLocationMutation,
 } = visitsApi;

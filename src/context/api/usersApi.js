@@ -43,6 +43,14 @@ export const usersApi = baseApi.injectEndpoints({
         { type: "User", id: "LIST" },
       ],
     }),
+
+    // GET /users/departments
+    getDepartments: builder.query({
+      query: () => ({
+        url: "/users/departments",
+      }),
+      transformResponse: (response) => response.data.departments ?? [],
+    }),
   }),
   overrideExisting: false,
 });
@@ -51,4 +59,5 @@ export const {
   useGetUsersQuery,
   useCreateUserMutation,
   useDeleteUserMutation,
+  useGetDepartmentsQuery,
 } = usersApi;

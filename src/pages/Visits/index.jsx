@@ -81,7 +81,7 @@ const QuickLeadModal = ({ onClose, onCreated }) => {
 const Visits = () => {
   const dispatch = useDispatch();
   const { user: currentUser } = useSelector((state) => state.auth);
-  const canAssign = currentUser?.role === "ADMIN" || currentUser?.department?.name === "Sales";
+  const canAssign = currentUser?.role === "ADMIN" || currentUser?.department?.name === "Sales Department";
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
   const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
 
@@ -108,7 +108,7 @@ const Visits = () => {
     visitDatetime: "", purpose: "", leadId: "", assignedStaffId: "",
   });
   const [updateData, setUpdateData] = useState({
-    status: "SCHEDULED", comments: "", customerFeedback: "",
+    status: "PENDING", comments: "", customerFeedback: "",
     workCompleted: "", issuesIdentified: "", nextSteps: "", assignedStaffId: "",
   });
 
@@ -177,7 +177,7 @@ const Visits = () => {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case "SCHEDULED": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+      case "PENDING": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
       case "COMPLETED": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
       case "CANCELLED": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
       case "RESCHEDULED": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
@@ -269,8 +269,8 @@ const Visits = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full mb-2 ${getStatusStyle(visit.status || "SCHEDULED")}`}>
-                          {(visit.status || "SCHEDULED").replace("_", " ")}
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full mb-2 ${getStatusStyle(visit.status || "PENDING")}`}>
+                          {(visit.status || "PENDING").replace("_", " ")}
                         </span>
                         {visit.updatedAt && (
                           <div className="text-[10px] text-gray-400 dark:text-gray-500 mb-2">
@@ -323,7 +323,7 @@ const Visits = () => {
                               onClick={() => {
                                 setSelectedVisit(visit);
                                 setUpdateData({
-                                  status: visit.status || "SCHEDULED",
+                                  status: visit.status || "PENDING",
                                   comments: visit.comments || "",
                                   customerFeedback: visit.customerFeedback || "",
                                   workCompleted: visit.workCompleted || "",
@@ -467,7 +467,7 @@ const Visits = () => {
                       <select value={updateData.status}
                         onChange={(e) => setUpdateData({ ...updateData, status: e.target.value })}
                         className={inputCls}>
-                        <option value="SCHEDULED">Scheduled</option>
+                        <option value="PENDING">Pending</option>
                         <option value="COMPLETED">Completed</option>
                         <option value="RESCHEDULED">Rescheduled</option>
                         <option value="CANCELLED">Cancelled</option>
