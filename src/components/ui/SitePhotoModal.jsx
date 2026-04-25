@@ -1,24 +1,23 @@
 // src/components/ui/SitePhotoModal.jsx
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   useGetVisitDocumentsQuery,
   useUploadVisitDocumentMutation,
   useDeleteDocumentMutation,
 } from "../../context/api/documents";
+import { useUpdateVisitLocationMutation } from "../../context/api/visitsApi";
 import { addToast } from "../../context/slices/toastSlice";
 import {
   XIcon,
   CameraIcon,
-  UploadSimpleIcon,
   MapPinIcon,
   SolarPanelIcon,
   LightningIcon,
-  UsersIcon,
-  CheckCircleIcon,
   TrashIcon,
-  ArrowsCounterClockwiseIcon,
+  PlusIcon,
   ImageIcon,
+  ArrowCounterClockwiseIcon,
 } from "@phosphor-icons/react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -30,50 +29,35 @@ const PHOTO_SECTIONS = [
     icon: MapPinIcon,
     color: "blue",
     description: "Document the site before any work begins.",
-    photos: [
-      {
-        category: "PRE_INSTALL_SITE",
-        label: "Site Overview Photo",
-        hint: "Geotagged photo of the installation site",
-        geoRequired: true,
-      },
-    ],
+    category: "PRE_INSTALL_SITE",
+    geoRequired: true,
   },
   {
-    id: "post",
-    label: "Post-Installation",
+    id: "post_panels",
+    label: "Solar Panels",
     icon: SolarPanelIcon,
     color: "green",
-    description: "Confirm installation quality after completion.",
-    photos: [
-      {
-        category: "POST_INSTALL_PANELS",
-        label: "Installed Solar Panels",
-        hint: "Geotagged photo of the mounted panels",
-        geoRequired: true,
-      },
-      {
-        category: "POST_INSTALL_INVERTER",
-        label: "Inverter with Panel Number",
-        hint: "Clearly show the panel/system number on the inverter",
-        geoRequired: false,
-      },
-    ],
+    description: "Confirm installed panels after completion.",
+    category: "POST_INSTALL_PANELS",
+    geoRequired: true,
+  },
+  {
+    id: "post_inverter",
+    label: "Inverter",
+    icon: SolarPanelIcon,
+    color: "emerald",
+    description: "Show the inverter with panel/system number.",
+    category: "POST_INSTALL_INVERTER",
+    geoRequired: false,
   },
   {
     id: "activation",
-    label: "System Activation",
+    label: "Activation",
     icon: LightningIcon,
     color: "amber",
     description: "Capture proof of system going live.",
-    photos: [
-      {
-        category: "ACTIVATION_CONSUMER_PLANT",
-        label: "Consumer with Solar Plant",
-        hint: "Geotagged photo of the consumer standing with the system",
-        geoRequired: true,
-      },
-    ],
+    category: "ACTIVATION_CONSUMER_PLANT",
+    geoRequired: true,
   },
 ];
 
@@ -81,29 +65,34 @@ const SECTION_COLORS = {
   blue: {
     header: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/40",
     icon: "text-blue-600 dark:text-blue-400",
-    badge: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
     tab: "border-blue-500 text-blue-600 dark:text-blue-400",
     tabInactive: "text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400",
     uploadBtn: "bg-blue-600 hover:bg-blue-700 text-white",
-    cameraBtn: "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800/40",
+    badge: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
   },
   green: {
     header: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/40",
     icon: "text-emerald-600 dark:text-emerald-400",
-    badge: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
     tab: "border-emerald-500 text-emerald-600 dark:text-emerald-400",
     tabInactive: "text-gray-500 hover:text-emerald-500 dark:text-gray-400 dark:hover:text-emerald-400",
     uploadBtn: "bg-emerald-600 hover:bg-emerald-700 text-white",
-    cameraBtn: "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800/40",
+    badge: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
+  },
+  emerald: {
+    header: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/40",
+    icon: "text-emerald-600 dark:text-emerald-400",
+    tab: "border-emerald-500 text-emerald-600 dark:text-emerald-400",
+    tabInactive: "text-gray-500 hover:text-emerald-500 dark:text-gray-400 dark:hover:text-emerald-400",
+    uploadBtn: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    badge: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
   },
   amber: {
     header: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40",
     icon: "text-amber-600 dark:text-amber-400",
-    badge: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
     tab: "border-amber-500 text-amber-600 dark:text-amber-400",
     tabInactive: "text-gray-500 hover:text-amber-500 dark:text-gray-400 dark:hover:text-amber-400",
     uploadBtn: "bg-amber-500 hover:bg-amber-600 text-white",
-    cameraBtn: "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:hover:bg-amber-900/40 dark:text-amber-400 dark:border-amber-800/40",
+    badge: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
   },
 };
 
@@ -115,13 +104,11 @@ const formatBytes = (bytes = 0) => {
 };
 
 // ─── Camera Capture Sub-modal ─────────────────────────────────────────────────
-
-const CameraCapture = ({ onCapture, onClose, color }) => {
+const CameraCapture = ({ onCapture, onClose }) => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
-  const colors = SECTION_COLORS[color];
 
   useEffect(() => {
     let active = true;
@@ -130,19 +117,10 @@ const CameraCapture = ({ onCapture, onClose, color }) => {
       .then((stream) => {
         if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-          setReady(true);
-        }
+        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play(); setReady(true); }
       })
-      .catch((err) => {
-        if (active) setError(`Camera access denied: ${err.message}`);
-      });
-    return () => {
-      active = false;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
+      .catch((err) => { if (active) setError(`Camera access denied: ${err.message}`); });
+    return () => { active = false; streamRef.current?.getTracks().forEach((t) => t.stop()); };
   }, []);
 
   const handleCapture = () => {
@@ -153,10 +131,7 @@ const CameraCapture = ({ onCapture, onClose, color }) => {
     canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0);
     canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
-        onCapture(file);
-      }
+      if (blob) { onCapture(new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" })); }
     }, "image/jpeg", 0.92);
   };
 
@@ -164,51 +139,27 @@ const CameraCapture = ({ onCapture, onClose, color }) => {
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 dark:border-slate-800">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <CameraIcon size={18} className={colors.icon} weight="bold" />
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">Camera Capture</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-          >
+          <span className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <CameraIcon size={16} weight="bold" className="text-emerald-500" /> Camera Capture
+          </span>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
             <XIcon size={14} weight="bold" />
           </button>
         </div>
-
         <div className="relative bg-black aspect-video">
           {error ? (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-red-400 px-4 text-center">
-              {error}
-            </div>
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-red-400 px-4 text-center">{error}</div>
           ) : (
             <>
               <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-              {!ready && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full border-2 border-white border-r-transparent animate-spin" />
-                </div>
-              )}
+              {!ready && <div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-white border-r-transparent animate-spin" /></div>}
             </>
           )}
         </div>
-
         <div className="p-4 flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleCapture}
-            disabled={!ready || !!error}
-            className={`flex-1 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 transition-colors ${colors.uploadBtn}`}
-          >
-            <CameraIcon size={16} weight="bold" />
-            Snap Photo
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
+          <button type="button" onClick={handleCapture} disabled={!ready || !!error} className="flex-1 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
+            <CameraIcon size={16} weight="bold" /> Snap Photo
           </button>
         </div>
       </div>
@@ -216,33 +167,10 @@ const CameraCapture = ({ onCapture, onClose, color }) => {
   );
 };
 
-// ─── Photo Card ──────────────────────────────────────────────────────────────
-
-const PhotoCard = ({ photo, doc, visitId, geo, color, isReadOnly }) => {
+// ─── Single uploaded photo thumbnail ────────────────────────────────────────
+const PhotoThumb = ({ doc, isReadOnly }) => {
   const dispatch = useDispatch();
-  const fileInputRef = useRef(null);
-  const [uploadVisitDocument, { isLoading: isUploading }] = useUploadVisitDocumentMutation();
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();
-  const [showCamera, setShowCamera] = useState(false);
-  const colors = SECTION_COLORS[color];
-
-  const doUpload = async (file) => {
-    try {
-      await uploadVisitDocument({ visitId, category: photo.category, file }).unwrap();
-      dispatch(addToast({ message: `${photo.label} uploaded successfully`, type: "success" }));
-    } catch (err) {
-      dispatch(addToast({
-        message: err?.data?.message || `Failed to upload ${photo.label}`,
-        type: "error",
-      }));
-    }
-  };
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (file) await doUpload(file);
-  };
 
   const handleDelete = async () => {
     if (!window.confirm("Remove this photo? This cannot be undone.")) return;
@@ -254,174 +182,162 @@ const PhotoCard = ({ photo, doc, visitId, geo, color, isReadOnly }) => {
     }
   };
 
-  const busy = isUploading || isDeleting;
+  return (
+    <div className="relative group rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 aspect-square">
+      <a href={doc.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+        <img
+          src={doc.url}
+          alt={doc.category}
+          className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-200"
+          onError={(e) => {
+            e.target.style.display = "none";
+            e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-xs text-gray-400">View ↗</div>';
+          }}
+        />
+      </a>
+      {/* Overlay info bar */}
+      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-2 py-1 translate-y-full group-hover:translate-y-0 transition-transform duration-150 flex items-center justify-between">
+        <span>{formatBytes(doc.bytes)} · {doc.uploadedBy?.name || "—"}</span>
+        {!isReadOnly && (
+          <button
+            onClick={(e) => { e.preventDefault(); handleDelete(); }}
+            disabled={isDeleting}
+            className="ml-2 p-0.5 rounded bg-red-600/80 hover:bg-red-700 text-white disabled:opacity-60 transition-colors"
+            title="Delete photo"
+          >
+            {isDeleting ? <span className="inline-block w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin" /> : <TrashIcon size={11} weight="bold" />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Reverse-geocode coordinates to a human-readable address ─────────────────
+const reverseGeocode = async (lat, lng) => {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    return data?.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  } catch {
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }
+};
+
+// ─── Category Section Panel ──────────────────────────────────────────────────
+const CategorySection = ({ section, docs, visitId, onRequestLocation, locationLabel, isReadOnly }) => {
+  const dispatch = useDispatch();
+  const fileInputRef = useRef(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [uploadVisitDocument, { isLoading: isUploading }] = useUploadVisitDocumentMutation();
+  const colors = SECTION_COLORS[section.color];
+  const Icon = section.icon;
+
+  const doUpload = async (file) => {
+    // Trigger location capture on first upload action if not yet captured
+    await onRequestLocation();
+    try {
+      await uploadVisitDocument({ visitId, category: section.category, file }).unwrap();
+      dispatch(addToast({ message: "Photo uploaded successfully", type: "success" }));
+    } catch (err) {
+      dispatch(addToast({ message: err?.data?.message || "Failed to upload photo", type: "error" }));
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    for (const file of files) await doUpload(file);
+  };
+
+  const handleCameraClick = async () => {
+    await onRequestLocation();
+    setShowCamera(true);
+  };
 
   return (
     <>
       {showCamera && (
         <CameraCapture
-          color={color}
           onClose={() => setShowCamera(false)}
-          onCapture={async (file) => {
-            setShowCamera(false);
-            await doUpload(file);
-          }}
+          onCapture={async (file) => { setShowCamera(false); await doUpload(file); }}
         />
       )}
-
-      <div
-        className={`rounded-xl border p-4 transition-all duration-200 ${
-          doc
-            ? "bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40"
-            : "bg-white dark:bg-dark-surface border-gray-200 dark:border-dark-border"
-        }`}
-      >
-        {/* Header row */}
-        <div className="flex items-start gap-3 mb-3">
-          {/* Status dot */}
-          <div
-            className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-              doc ? "bg-emerald-500" : "bg-gray-200 dark:bg-slate-700"
-            }`}
-          >
-            {doc ? (
-              <CheckCircleIcon size={12} weight="fill" className="text-white" />
-            ) : (
-              <ImageIcon size={10} className="text-gray-400 dark:text-gray-500" />
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{photo.label}</p>
-            {doc ? (
-              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
-                <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-800 font-mono text-[10px] uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                  {doc.format || "jpg"}
-                </span>
-                <span>{formatBytes(doc.bytes)}</span>
-                <span className="text-gray-300 dark:text-slate-700">•</span>
-                <span>
-                  by <strong className="font-medium text-gray-700 dark:text-gray-200">{doc.uploadedBy?.name || "—"}</strong>
-                </span>
-                <span className="text-gray-300 dark:text-slate-700">•</span>
-                <span>
-                  {new Date(doc.createdAt).toLocaleDateString()} {new Date(doc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            ) : (
-              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{photo.hint}</p>
-            )}
-          </div>
-
-          {/* Geo badge */}
-          {photo.geoRequired && (
-            <div
-              title={geo ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)}` : "Geolocation unavailable"}
-              className={`shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                geo
-                  ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-950/30 dark:border-green-800/40 dark:text-green-400"
-                  : "bg-gray-50 border-gray-200 text-gray-400 dark:bg-slate-800/40 dark:border-slate-700 dark:text-gray-500"
-              }`}
-            >
-              <MapPinIcon size={11} weight="fill" />
-              {geo ? `${geo.lat.toFixed(3)}, ${geo.lng.toFixed(3)}` : "No GPS"}
+      <div className={`rounded-xl border p-4 ${colors.header}`}>
+        {/* Section Header */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5">
+            <Icon size={18} weight="fill" className={colors.icon} />
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{section.label}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{section.description}</p>
             </div>
-          )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {section.geoRequired && locationLabel && (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border bg-green-50 border-green-200 text-green-700 dark:bg-green-950/30 dark:border-green-800/40 dark:text-green-400 max-w-[140px] truncate" title={locationLabel}>
+                <MapPinIcon size={11} weight="fill" className="shrink-0" />
+                <span className="truncate">{locationLabel}</span>
+              </span>
+            )}
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${colors.badge}`}>
+              {docs.length} photo{docs.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
 
-        {/* Thumbnail if uploaded */}
-        {doc && (
-          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="block mb-3">
-            <div className="w-full h-36 rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:opacity-90 transition-opacity">
-              <img
-                src={doc.url}
-                alt={photo.label}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                  e.target.parentElement.classList.add("flex", "items-center", "justify-center");
-                  e.target.parentElement.innerHTML =
-                    '<span class="text-xs text-gray-400">View Photo ↗</span>';
-                }}
-              />
-            </div>
-          </a>
+        {/* Photo Grid */}
+        {docs.length > 0 && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+            {docs.map((doc) => (
+              <PhotoThumb key={doc.id} doc={doc} isReadOnly={isReadOnly} />
+            ))}
+          </div>
         )}
 
-        {/* Action buttons */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          accept="image/*"
-          onChange={handleFileChange}
-          aria-label={`Upload ${photo.label}`}
-        />
+        {/* Empty state */}
+        {docs.length === 0 && (
+          <div className="flex items-center gap-2 py-3 mb-3 text-xs text-gray-400 dark:text-gray-500">
+            <ImageIcon size={16} />
+            No photos yet — add as many as needed.
+          </div>
+        )}
 
+        {/* Upload buttons */}
         {!isReadOnly && (
-          <div className="flex gap-2 flex-wrap">
-            {!doc && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={busy}
-                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${colors.uploadBtn}`}
-                >
-                  {isUploading ? (
-                    <span className="inline-block w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin" />
-                  ) : (
-                    <UploadSimpleIcon size={13} weight="bold" />
-                  )}
-                  {isUploading ? "Uploading…" : "Upload File"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowCamera(true)}
-                  disabled={busy}
-                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${colors.cameraBtn}`}
-                >
-                  <CameraIcon size={13} weight="bold" />
-                  Take Photo
-                </button>
-              </>
-            )}
-
-            {doc && (
-              <>
-                <a
-                  href={doc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  View Full Photo ↗
-                </a>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={busy}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
-                  title="Replace photo"
-                >
-                  <ArrowsCounterClockwiseIcon size={13} weight="bold" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={busy}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-red-100 dark:border-red-900/40 bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-60"
-                  title="Delete photo"
-                >
-                  {isDeleting ? (
-                    <span className="inline-block w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin" />
-                  ) : (
-                    <TrashIcon size={13} weight="bold" />
-                  )}
-                </button>
-              </>
-            )}
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${colors.uploadBtn}`}
+            >
+              {isUploading
+                ? <span className="inline-block w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin" />
+                : <PlusIcon size={13} weight="bold" />
+              }
+              {isUploading ? "Uploading…" : "Add Photos"}
+            </button>
+            <button
+              type="button"
+              onClick={handleCameraClick}
+              disabled={isUploading}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
+            >
+              <CameraIcon size={13} weight="bold" />
+              Camera
+            </button>
           </div>
         )}
       </div>
@@ -430,172 +346,163 @@ const PhotoCard = ({ photo, doc, visitId, geo, color, isReadOnly }) => {
 };
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
-
 const SitePhotoModal = ({ visit, onClose }) => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "OPERATIONS DEPARTMENT"; // Installation can always upload
+  const isReadOnly = dept === "OPERATIONS DEPARTMENT";
 
   const [activeSection, setActiveSection] = useState("pre");
-  const [geo, setGeo] = useState(null);
-  const [geoError, setGeoError] = useState(null);
+  // Seed from DB — if visit already has a saved location, use it immediately
+  const [locationLabel, setLocationLabel] = useState(visit.siteLocation || null);
+  const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  const locationSavedRef = useRef(!!visit.siteLocation); // already in DB?
 
-  // Fetch all existing visit photos
+  const [updateVisitLocation] = useUpdateVisitLocationMutation();
   const { data: documents = [], isLoading } = useGetVisitDocumentsQuery(visit.id, { skip: !visit?.id });
 
-  // Build a lookup map by category
-  const docByCategory = documents.reduce((acc, doc) => {
-    acc[doc.category] = doc;
+  // Group docs by category
+  const docsByCategory = documents.reduce((acc, doc) => {
+    if (!acc[doc.category]) acc[doc.category] = [];
+    acc[doc.category].push(doc);
     return acc;
   }, {});
 
-  // Attempt geolocation on mount
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setGeoError("Geolocation not supported by this browser.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => setGeoError(`GPS unavailable: ${err.message}`)
-    );
-  }, []);
+  const totalPhotos = documents.length;
 
-  // Count total required vs uploaded
-  const allPhotos = PHOTO_SECTIONS.flatMap((s) => s.photos);
-  const uploadedCount = allPhotos.filter((p) => docByCategory[p.category]).length;
-  const totalCount = allPhotos.length;
-  const progress = Math.round((uploadedCount / totalCount) * 100);
+  // Capture GPS + reverse-geocode + save to DB
+  // force=false → only saves if not already in DB
+  // force=true  → overwrites (user clicked "Update Location")
+  const captureAndSaveLocation = useCallback(async (force = false) => {
+    if (!navigator.geolocation) return;
+    if (locationSavedRef.current && !force) return; // already persisted, skip
 
-  const currentSectionDef = PHOTO_SECTIONS.find((s) => s.id === activeSection);
-  const sectionColors = SECTION_COLORS[currentSectionDef.color];
+    setIsCapturingLocation(true);
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const label = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+            setLocationLabel(label);
+            await updateVisitLocation({ id: visit.id, siteLocation: label, force }).unwrap();
+            locationSavedRef.current = true;
+          } catch {
+            // silently ignore save errors — UI still shows the label
+          } finally {
+            setIsCapturingLocation(false);
+            resolve();
+          }
+        },
+        () => { setIsCapturingLocation(false); resolve(); }
+      );
+    });
+  }, [visit.id, updateVisitLocation]);
+
+  // Called by CategorySection before any upload
+  const handleRequestLocation = useCallback(() => captureAndSaveLocation(false), [captureAndSaveLocation]);
+
+  const currentSection = PHOTO_SECTIONS.find((s) => s.id === activeSection);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-dark-surface w-full max-w-xl rounded-2xl shadow-2xl border border-gray-200 dark:border-dark-border flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="bg-white dark:bg-dark-surface w-full max-w-2xl rounded-2xl shadow-2xl border border-gray-200 dark:border-dark-border flex flex-col max-h-[92vh] overflow-hidden">
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="px-5 py-4 border-b border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg shrink-0">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 mb-0.5">
-                Site Visit Photos
-              </p>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                {visit.customerName}
-              </h2>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 mb-0.5">Site Visit Photos</p>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{visit.customerName}</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{visit.address}</p>
             </div>
-            <button
-              onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors shrink-0"
-            >
-              <XIcon size={14} weight="bold" />
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                <strong className="text-gray-800 dark:text-gray-200">{totalPhotos}</strong> photo{totalPhotos !== 1 ? "s" : ""} total
+              </span>
+              <button
+                onClick={onClose}
+                className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <XIcon size={14} weight="bold" />
+              </button>
+            </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="mt-3">
-            <div className="flex justify-between items-center mb-1.5">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {uploadedCount} of {totalCount} photos uploaded
+          {/* Site Location strip */}
+          <div className="mt-2 flex items-start gap-2">
+            <MapPinIcon size={11} weight="fill" className={`mt-0.5 shrink-0 ${locationLabel ? "text-green-500" : "text-gray-400"}`} />
+            {locationLabel ? (
+              <span className="text-[11px] text-green-600 dark:text-green-400 leading-snug flex-1">{locationLabel}</span>
+            ) : (
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 italic">
+                Location will be captured when you upload the first photo.
               </span>
-              {geo ? (
-                <span className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
-                  <MapPinIcon size={11} weight="fill" />
-                  GPS active
-                </span>
-              ) : (
-                <span className="text-[11px] text-gray-400 dark:text-gray-500">
-                  {geoError || "Fetching GPS…"}
-                </span>
-              )}
-            </div>
-            <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            )}
+            {/* Update Location button — only shown when location is already set */}
+            {locationLabel && !isReadOnly && (
+              <button
+                type="button"
+                onClick={() => captureAndSaveLocation(true)}
+                disabled={isCapturingLocation}
+                title="Re-capture and update site location"
+                className="ml-1 shrink-0 flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 hover:text-emerald-600 hover:border-emerald-300 dark:hover:text-emerald-400 dark:hover:border-emerald-700 transition-colors disabled:opacity-60"
+              >
+                {isCapturingLocation
+                  ? <span className="inline-block w-2.5 h-2.5 border-2 border-current border-r-transparent rounded-full animate-spin" />
+                  : <ArrowCounterClockwiseIcon size={10} weight="bold" />
+                }
+                Update
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Section Tabs ── */}
-        <div className="flex border-b border-gray-200 dark:border-dark-border shrink-0 bg-white dark:bg-dark-surface">
+        {/* Section Tabs */}
+        <div className="flex border-b border-gray-200 dark:border-dark-border shrink-0 bg-white dark:bg-dark-surface overflow-x-auto">
           {PHOTO_SECTIONS.map((section) => {
             const Icon = section.icon;
-            const sectionUploaded = section.photos.filter((p) => docByCategory[p.category]).length;
+            const count = (docsByCategory[section.category] || []).length;
             const isActive = activeSection === section.id;
             const sc = SECTION_COLORS[section.color];
             return (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-2.5 text-[11px] font-semibold border-b-2 transition-all duration-150 ${
-                  isActive
-                    ? `${sc.tab} bg-gray-50 dark:bg-dark-bg`
-                    : `border-transparent ${sc.tabInactive}`
+                className={`flex-1 min-w-[80px] flex flex-col items-center gap-0.5 px-2 py-2.5 text-[11px] font-semibold border-b-2 transition-all duration-150 ${
+                  isActive ? `${sc.tab} bg-gray-50 dark:bg-dark-bg` : `border-transparent ${sc.tabInactive}`
                 }`}
               >
                 <Icon size={15} weight={isActive ? "fill" : "regular"} />
-                <span className="hidden sm:block truncate">{section.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                  sectionUploaded === section.photos.length
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
-                    : sc.badge
-                }`}>
-                  {sectionUploaded}/{section.photos.length}
-                </span>
+                <span className="hidden sm:block truncate max-w-[80px]">{section.label}</span>
+                {count > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${sc.badge}`}>{count}</span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* ── Photo Content ── */}
+        {/* Content */}
         <div className="overflow-y-auto flex-1 p-4">
-          {/* Section header */}
-          <div className={`rounded-xl border p-3 mb-4 flex items-center gap-3 ${sectionColors.header}`}>
-            {(() => {
-              const Icon = currentSectionDef.icon;
-              return <Icon size={18} weight="fill" className={sectionColors.icon} />;
-            })()}
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {currentSectionDef.label}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {currentSectionDef.description}
-              </p>
-            </div>
-          </div>
-
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-500 dark:text-gray-400">
               <span className="w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin" />
               Loading photos…
             </div>
           ) : (
-            <div className="space-y-3">
-              {currentSectionDef.photos.map((photo) => (
-                <PhotoCard
-                  key={photo.category}
-                  photo={photo}
-                  doc={docByCategory[photo.category] || null}
-                  visitId={visit.id}
-                  geo={geo}
-                  color={currentSectionDef.color}
-                  isReadOnly={isReadOnly}
-                />
-              ))}
-            </div>
+            <CategorySection
+              section={currentSection}
+              docs={docsByCategory[currentSection.category] || []}
+              visitId={visit.id}
+              onRequestLocation={handleRequestLocation}
+              locationLabel={locationLabel}
+              isReadOnly={isReadOnly}
+            />
           )}
         </div>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <div className="px-5 py-3 border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg shrink-0 flex items-center justify-between">
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            All photos are stored securely on Cloudinary.
-          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">All photos stored securely on Cloudinary.</p>
           <button
             type="button"
             onClick={onClose}

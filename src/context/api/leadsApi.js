@@ -43,7 +43,7 @@ export const leadsApi = baseApi.injectEndpoints({
       query: ({ id, status, assignedToId }) => ({
         url: `/leads/${id}/status`,
         method: "PATCH",
-        body: { status, assignedToId },
+        body: { status, ...(assignedToId ? { assignedToId } : {}) },
       }),
       transformResponse: (response) => response.data.lead,
       // Invalidate the specific lead + the list (for status-filtered views)
