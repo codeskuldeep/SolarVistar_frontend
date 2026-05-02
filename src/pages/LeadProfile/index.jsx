@@ -217,8 +217,18 @@ const LeadProfile = () => {
                 <FileText weight="fill" size={20} />
               </div>
               <div className="truncate">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{doc.category}</p>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{doc.fileType?.split('/')[1] || 'FILE'}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {doc.category === "OTHER" && doc.task ? doc.task.name : doc.category.replace(/_/g, " ")}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-mono">
+                    {doc.format || 'FILE'}
+                  </span>
+                  <span className="text-gray-300 dark:text-slate-700">•</span>
+                  <span className={`text-[10px] uppercase tracking-wider font-semibold ${doc.task ? 'text-indigo-600 dark:text-indigo-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {doc.task ? "Project Task" : "Lead Document"}
+                  </span>
+                </div>
               </div>
             </div>
             <button 

@@ -50,6 +50,10 @@ export const leadsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Lead", id },
         { type: "Lead", id: "LIST" },
+        // When a lead is converted to "Won", a Project is auto-created on the backend.
+        // Invalidate Project + Dashboard tags so the Customers page & Dashboard update instantly.
+        { type: "Project", id: "LIST" },
+        "Dashboard",
       ],
     }),
 

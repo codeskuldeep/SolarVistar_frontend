@@ -203,9 +203,16 @@ const Leads = () => {
     const result = await updateLeadStatus(payload);
     if (!result.error) {
       setActiveModal(null);
-      dispatch(
-        addToast({ message: "Lead updated successfully", type: "success" }),
-      );
+      if (updateData.status === "CONVERTED") {
+        dispatch(
+          addToast({ message: "🎉 Lead converted! Project created in Customers.", type: "success" }),
+        );
+        navigate("/customers");
+      } else {
+        dispatch(
+          addToast({ message: "Lead updated successfully", type: "success" }),
+        );
+      }
     } else {
       console.error("Lead update failed:", result.error);
       dispatch(
