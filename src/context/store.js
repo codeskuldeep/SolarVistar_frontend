@@ -10,6 +10,7 @@ import "./api/visitsApi";
 import "./api/quotationsApi";
 import "./api/usersApi";
 import "./api/dashboardApi";
+import "./api/projectsApi";
 
 const appReducer = combineReducers({
   auth: authReducer,

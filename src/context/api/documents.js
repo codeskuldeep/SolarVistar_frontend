@@ -14,23 +14,32 @@ export const documentsApi = baseApi.injectEndpoints({
     }),
 
     uploadDocument: builder.mutation({
-      query: ({ leadId, category, file }) => {
+      query: ({ leadId, visitId, projectId, taskId, category, file }) => {
         const formData = new FormData();
         formData.append('file', file);
-        // IMPORTANT: category & leadId go in the URL as query params,
-        // NOT in the form data. Do NOT set Content-Type header manually —
-        // the browser must set multipart boundaries automatically.
+        
+        let url = `/documents?category=${encodeURIComponent(category)}`;
+        if (leadId) url += `&leadId=${encodeURIComponent(leadId)}`;
+        if (visitId) url += `&visitId=${encodeURIComponent(visitId)}`;
+        if (projectId) url += `&projectId=${encodeURIComponent(projectId)}`;
+        if (taskId) url += `&taskId=${encodeURIComponent(taskId)}`;
+
         return {
-          url: `/documents?category=${encodeURIComponent(category)}&leadId=${encodeURIComponent(leadId)}`,
+          url,
           method: 'POST',
           body: formData,
           formData: true,
         };
       },
-      invalidatesTags: (result, error, { leadId }) => [
-        { type: 'LeadDocuments', id: leadId },
-        'LeadDocuments',
-      ],
+      invalidatesTags: (result, error, { leadId, projectId }) => {
+        const tags = ['LeadDocuments', 'VisitDocuments'];
+        if (leadId) tags.push({ type: 'LeadDocuments', id: leadId });
+        if (projectId) {
+          tags.push({ type: 'ProjectDocuments', id: projectId });
+          tags.push({ type: 'Project', id: projectId });
+        }
+        return tags;
+      },
     }),
 
     deleteDocument: builder.mutation({

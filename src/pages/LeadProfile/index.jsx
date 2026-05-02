@@ -267,6 +267,14 @@ const LeadProfile = () => {
                 {lead.status.replace(/_/g, " ")}
               </span>
               <span className="text-xs text-gray-400 font-mono">ID: {lead.id}</span>
+              {lead.project && (
+                <button
+                  onClick={() => navigate(`/projects/${lead.project.id}`)}
+                  className="mt-1 px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                >
+                  View Project →
+                </button>
+              )}
             </div>
           </div>
           
