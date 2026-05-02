@@ -11,6 +11,7 @@ import ExistingCustomers from "../pages/Customers";
 import LeadDocuments from "../components/LeadDocuments";
 import Profile from "../pages/Profile";
 import LeadProfile from "../pages/LeadProfile";
+import ProjectProfile from "../pages/ProjectProfile";
 
 export const router = createBrowserRouter([
   {
@@ -64,6 +65,10 @@ export const router = createBrowserRouter([
           {
             path: "customers/:id/profile",
             element: <LeadProfile />,
+          },
+          {
+            path: "projects/:id",
+            element: <ProjectProfile />,
           },
           {
             path: "profile",
