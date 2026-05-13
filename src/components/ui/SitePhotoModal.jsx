@@ -352,8 +352,19 @@ const SitePhotoModal = ({ visit, onClose }) => {
   const isReadOnly = dept === "OPERATIONS DEPARTMENT";
 
   const [activeSection, setActiveSection] = useState("pre");
+  // Helper to parse location
+  const parseLocation = (locStr) => {
+    if (!locStr) return null;
+    try {
+      const parsed = JSON.parse(locStr);
+      return parsed.tagName ? parsed : { tagName: locStr };
+    } catch {
+      return { tagName: locStr };
+    }
+  };
+
   // Seed from DB — if visit already has a saved location, use it immediately
-  const [locationLabel, setLocationLabel] = useState(visit.siteLocation || null);
+  const [locationData, setLocationData] = useState(parseLocation(visit.siteLocation));
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const locationSavedRef = useRef(!!visit.siteLocation); // already in DB?
 
@@ -382,8 +393,14 @@ const SitePhotoModal = ({ visit, onClose }) => {
         async (pos) => {
           try {
             const label = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-            setLocationLabel(label);
-            await updateVisitLocation({ id: visit.id, siteLocation: label, force }).unwrap();
+            const newLoc = {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              tagName: label
+            };
+            const locationStr = JSON.stringify(newLoc);
+            setLocationData(newLoc);
+            await updateVisitLocation({ id: visit.id, siteLocation: locationStr, force }).unwrap();
             locationSavedRef.current = true;
           } catch {
             // silently ignore save errors — UI still shows the label
@@ -429,16 +446,23 @@ const SitePhotoModal = ({ visit, onClose }) => {
 
           {/* Site Location strip */}
           <div className="mt-2 flex items-start gap-2">
-            <MapPinIcon size={11} weight="fill" className={`mt-0.5 shrink-0 ${locationLabel ? "text-green-500" : "text-gray-400"}`} />
-            {locationLabel ? (
-              <span className="text-[11px] text-green-600 dark:text-green-400 leading-snug flex-1">{locationLabel}</span>
+            <MapPinIcon size={11} weight="fill" className={`mt-0.5 shrink-0 ${locationData?.tagName ? "text-green-500" : "text-gray-400"}`} />
+            {locationData?.tagName ? (
+              <div className="flex-1 flex flex-col gap-0.5">
+                <span className="text-[11px] text-green-600 dark:text-green-400 leading-snug">{locationData.tagName}</span>
+                {locationData.lat && locationData.lng && (
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                    Lat: {Number(locationData.lat).toFixed(6)}, Lng: {Number(locationData.lng).toFixed(6)}
+                  </span>
+                )}
+              </div>
             ) : (
               <span className="text-[11px] text-gray-400 dark:text-gray-500 italic">
                 Location will be captured when you upload the first photo.
               </span>
             )}
             {/* Update Location button — only shown when location is already set */}
-            {locationLabel && !isReadOnly && (
+            {locationData?.tagName && !isReadOnly && (
               <button
                 type="button"
                 onClick={() => captureAndSaveLocation(true)}
@@ -494,7 +518,7 @@ const SitePhotoModal = ({ visit, onClose }) => {
               docs={docsByCategory[currentSection.category] || []}
               visitId={visit.id}
               onRequestLocation={handleRequestLocation}
-              locationLabel={locationLabel}
+              locationLabel={locationData?.tagName}
               isReadOnly={isReadOnly}
             />
           )}

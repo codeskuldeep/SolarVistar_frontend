@@ -350,6 +350,17 @@ const EmptyState = ({ icon: Icon, message }) => (
 const VisitCard = ({ visit }) => {
   const { data: photos = [], isLoading } = useGetVisitDocumentsQuery(visit.id);
 
+  const parseLocation = (locStr) => {
+    if (!locStr) return null;
+    try {
+      const parsed = JSON.parse(locStr);
+      return parsed.lat && parsed.lng ? parsed : { tagName: locStr };
+    } catch {
+      return { tagName: locStr };
+    }
+  };
+  const locData = parseLocation(visit.siteLocation);
+
   const statusColor = {
     COMPLETED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
     PENDING: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
@@ -361,24 +372,32 @@ const VisitCard = ({ visit }) => {
     <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-sm overflow-hidden">
       {/* Visit header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 w-full">
           <div className={`mt-0.5 p-1.5 rounded-lg ${visit.status === "COMPLETED" ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
             {visit.status === "COMPLETED"
               ? <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400" weight="fill" />
               : <ClockCounterClockwise size={16} className="text-amber-600 dark:text-amber-400" weight="fill" />
             }
           </div>
-          <div>
+          <div className="flex-1">
             <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{visit.purpose}</h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {new Date(visit.visitDatetime).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
               {visit.assignedStaff?.name && ` · ${visit.assignedStaff.name}`}
             </p>
-            {visit.siteLocation && (
-              <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <MapPin size={11} weight="fill" className="shrink-0" />
-                {visit.siteLocation}
-              </p>
+            {locData && (
+              <div className="mt-2 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-md p-2">
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 flex items-start gap-1 font-medium mb-1">
+                  <MapPin size={12} weight="fill" className="shrink-0 mt-0.5" />
+                  {locData.tagName}
+                </p>
+                {locData.lat && locData.lng && (
+                  <div className="flex gap-3 text-[10px] text-gray-500 dark:text-gray-400 ml-4 font-mono">
+                    <span>Lat: {Number(locData.lat).toFixed(6)}</span>
+                    <span>Lng: {Number(locData.lng).toFixed(6)}</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

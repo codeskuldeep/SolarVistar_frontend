@@ -71,15 +71,8 @@ const Leads = () => {
   const { user: currentUser } = useSelector((state) => state.auth);
 
   const isAdmin = currentUser?.role === "ADMIN";
-  const canAssign = isAdmin || currentUser?.department?.name === "Sales Department";
-  const dept = (
-    currentUser?.department?.name ||
-    currentUser?.department ||
-    ""
-  ).toUpperCase();
-  const isReadOnly =
-    dept === "INSTALLATION & MAINTENANCE DEPARTMENT" ||
-    dept === "OPERATIONS DEPARTMENT";
+  const canAssign = true;
+  const isReadOnly = false;
 
   // ── Table search state ──
   const [searchTerm, setSearchTerm] = useState("");

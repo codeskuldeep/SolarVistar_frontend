@@ -37,6 +37,7 @@ export const documentsApi = baseApi.injectEndpoints({
         if (projectId) {
           tags.push({ type: 'ProjectDocuments', id: projectId });
           tags.push({ type: 'Project', id: projectId });
+          tags.push({ type: 'Document', id: `MATRIX_${projectId}` });
         }
         return tags;
       },
@@ -47,7 +48,7 @@ export const documentsApi = baseApi.injectEndpoints({
         url: `/documents/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: () => ['LeadDocuments', 'VisitDocuments'],
+      invalidatesTags: (_result, _error, _id) => ['LeadDocuments', 'VisitDocuments', 'Document'],
     }),
 
     // ── Visit Documents (Site Photos) ────────────────────────────────

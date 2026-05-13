@@ -81,9 +81,8 @@ const QuickLeadModal = ({ onClose, onCreated }) => {
 const Visits = () => {
   const dispatch = useDispatch();
   const { user: currentUser } = useSelector((state) => state.auth);
-  const canAssign = currentUser?.role === "ADMIN" || currentUser?.department?.name === "Sales Department";
-  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
+  const canAssign = true;
+  const isReadOnly = false;
 
   // ── Table search ──
   const [searchTerm, setSearchTerm] = useState("");
@@ -126,7 +125,7 @@ const Visits = () => {
 
   const { data: staffData, isFetching: staffFetching } = useGetUsersQuery(
     { limit: 10, search: debouncedStaffSearch },
-    { skip: !activeModal || !canAssign }
+    { skip: !activeModal }
   );
 
   const [createVisit, { isLoading: isCreating }] = useCreateVisitMutation();
@@ -440,9 +439,8 @@ const Visits = () => {
                         isLoading={staffFetching}
                         onSelect={(id) => setCreateData((prev) => ({ ...prev, assignedStaffId: id }))}
                         label="Assign Staff"
-                        placeholder={canAssign ? "Search staff by name..." : "You cannot assign staff"}
+                        placeholder="Search staff by name..."
                         selectedTheme="neutral"
-                        disabled={!canAssign}
                         renderItem={(staff, isSelected) =>
                           isSelected ? `${staff.name} (${staff.department?.name || staff.department || staff.role})` : (
                             <div className="flex flex-col">
@@ -479,10 +477,9 @@ const Visits = () => {
                       onSearch={setStaffSearch}
                       isLoading={staffFetching}
                       onSelect={(id) => setUpdateData((prev) => ({ ...prev, assignedStaffId: id || "" }))}
-                      label={`Reassign Staff${!canAssign ? " (Restricted)" : ""}`}
-                      placeholder={canAssign ? "Search staff by name..." : "You cannot assign staff"}
+                      label="Reassign Staff"
+                      placeholder="Search staff by name..."
                       selectedTheme="neutral"
-                      disabled={!canAssign}
                       renderItem={(staff, isSelected) =>
                         isSelected ? `${staff.name} (${staff.department?.name || staff.department || staff.role})` : (
                           <div className="flex flex-col">
