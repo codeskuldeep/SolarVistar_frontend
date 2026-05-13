@@ -15,7 +15,9 @@ import {
   MoonIcon,
   SolarPanelIcon,
   MoneyIcon,
+  BellIcon,
 } from "@phosphor-icons/react";
+import { useGetAdminAlertsQuery } from "../../context/api/dashboardApi";
 import { IndianRupeeIcon } from "lucide-react";
 
 
@@ -24,10 +26,18 @@ const DashboardLayout = () => {
   const [isDark, setIsDark] = useState(() => {
     return localStorage.getItem("theme") === "dark";
   });
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
 
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const { data: alertsData } = useGetAdminAlertsQuery(undefined, {
+    skip: !user, // Fetch for all logged-in users
+    pollingInterval: 60000,
+  });
+  const alerts = alertsData || [];
+  const unreadAlerts = alerts.length;
 
   useEffect(() => {
     if (isDark) {
@@ -82,6 +92,12 @@ const DashboardLayout = () => {
       href: "/customers",
       icon: UsersIcon,
       roles: ["ADMIN", "STAFF"],
+    },
+    {
+      name: "Team Workload",
+      href: "/admin/team-workload",
+      icon: UsersIcon,
+      roles: ["ADMIN"],
     },
   ];
 
@@ -220,6 +236,79 @@ const DashboardLayout = () => {
           </div>
 
           <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  onClick={() => setIsAlertsOpen(!isAlertsOpen)}
+                  className="relative p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border rounded-lg transition-colors"
+                  aria-label="View alerts"
+                >
+                  <BellIcon size={18} weight="bold" />
+                  {unreadAlerts > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-dark-surface"></span>
+                  )}
+                </button>
+
+                {isAlertsOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsAlertsOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden">
+                      <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Smart Alerts</h3>
+                        <span className="text-xs bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full font-bold">{unreadAlerts} Open</span>
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700/50">
+                        {alerts.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No active alerts right now!
+                          </div>
+                        ) : (
+                          alerts.slice(0, 10).map((alert) => (
+                            <div 
+                              key={alert.id} 
+                              className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+                              onClick={() => {
+                                setIsAlertsOpen(false);
+                                navigate(alert.actionUrl);
+                              }}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className={`mt-0.5 shrink-0 w-2 h-2 rounded-full ${
+                                  alert.severity === 'HIGH' ? 'bg-red-500' : 
+                                  alert.severity === 'MED' ? 'bg-amber-500' : 'bg-blue-500'
+                                }`} />
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">{alert.title}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{alert.description}</p>
+                                  <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400 font-medium">
+                                    <span className="uppercase tracking-wider">{alert.category.replace('_', ' ')}</span>
+                                    <span>•</span>
+                                    <span>{alert.daysOpen}d ago</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <div className="p-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                        <button 
+                          onClick={() => {
+                            setIsAlertsOpen(false);
+                            navigate('/admin/alerts');
+                          }}
+                          className="w-full text-center text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 py-1"
+                        >
+                          View All Alerts
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
             <button
               onClick={() => setIsDark(!isDark)}
               className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border rounded-lg transition-colors"

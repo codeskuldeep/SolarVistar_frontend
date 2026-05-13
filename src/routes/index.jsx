@@ -12,6 +12,13 @@ import LeadDocuments from "../components/LeadDocuments";
 import Profile from "../pages/Profile";
 import LeadProfile from "../pages/LeadProfile";
 import ProjectProfile from "../pages/ProjectProfile";
+import Pendency from "../pages/Admin/Pendency";
+import Alerts from "../pages/Admin/Alerts";
+import TeamWorkload from "../pages/Admin/TeamWorkload";
+import ProjectsInOps from "../pages/Admin/ProjectsInOps";
+import InstallationPending from "../pages/Admin/InstallationPending";
+import SubsidyPending from "../pages/Admin/SubsidyPending";
+import CompletedProjects from "../pages/Admin/CompletedProjects";
 
 export const router = createBrowserRouter([
   {
@@ -73,6 +80,34 @@ export const router = createBrowserRouter([
           {
             path: "profile",
             element: <Profile />,
+          },
+          {
+            path: "admin/pendency",
+            element: <Pendency />,
+          },
+          {
+            path: "admin/alerts",
+            element: <Alerts />,
+          },
+          {
+            path: "admin/team-workload",
+            element: <TeamWorkload />,
+          },
+          {
+            path: "admin/projects-in-ops",
+            element: <ProjectsInOps />,
+          },
+          {
+            path: "admin/installation-pending",
+            element: <InstallationPending />,
+          },
+          {
+            path: "admin/subsidy-pending",
+            element: <SubsidyPending />,
+          },
+          {
+            path: "admin/completed-projects",
+            element: <CompletedProjects />,
           },
         ],
       },

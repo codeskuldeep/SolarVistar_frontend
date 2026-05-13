@@ -157,6 +157,41 @@ export const projectsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Phase 8: Document Matrix & Activity
+    getDocumentMatrix: builder.query({
+      query: (projectId) => `/projects/${projectId}/document-matrix`,
+      transformResponse: (response) => response.data.matrix,
+      providesTags: (_result, _error, projectId) => [
+        { type: "Document", id: `MATRIX_${projectId}` },
+        { type: "Project", id: projectId }
+      ]
+    }),
+
+    verifyDocument: builder.mutation({
+      query: ({ projectId, documentId }) => ({
+        url: `/projects/${projectId}/documents/${documentId}/verify`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "Document", id: `MATRIX_${projectId}` },
+        { type: "Project", id: projectId }
+      ]
+    }),
+
+    getProjectActivity: builder.query({
+      query: ({ projectId, page = 1, limit = 10 }) => ({
+        url: `/projects/${projectId}/activity`,
+        params: { page, limit },
+      }),
+      transformResponse: (response) => ({
+        logs: response.data.logs,
+        meta: response.data.meta,
+      }),
+      providesTags: (_result, _error, { projectId }) => [
+        { type: "ActivityLog", id: `PROJECT_${projectId}` }
+      ]
+    }),
+
   }),
   overrideExisting: false,
 });
@@ -173,4 +208,7 @@ export const {
   useUpdateProjectStageMutation,
   useUpsertSubsidyMutation,
   useUpdateAmcRecordMutation,
+  useGetDocumentMatrixQuery,
+  useVerifyDocumentMutation,
+  useGetProjectActivityQuery,
 } = projectsApi;

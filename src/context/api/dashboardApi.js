@@ -24,8 +24,25 @@ export const dashboardApi = baseApi.injectEndpoints({
       transformResponse: (response) => response.data,
       providesTags: ["Dashboard", "Project", "Lead"],
     }),
+    
+    getAdminAlerts: builder.query({
+      query: () => "/dashboard/alerts",
+      transformResponse: (response) => response.data,
+      providesTags: ["Dashboard", "Project", "Lead", "ProjectTask"],
+    }),
+
+    getTeamWorkload: builder.query({
+      query: () => "/dashboard/team-workload",
+      transformResponse: (response) => response.data,
+      providesTags: ["Dashboard", "Project", "ProjectTask"],
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useGetAdminStatsQuery, useGetUnifiedPipelineQuery } = dashboardApi;
+export const { 
+  useGetAdminStatsQuery, 
+  useGetUnifiedPipelineQuery,
+  useGetAdminAlertsQuery,
+  useGetTeamWorkloadQuery
+} = dashboardApi;

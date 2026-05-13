@@ -14,7 +14,11 @@ import {
   ArrowLeft,
   Edit2,
   Printer,
+  UploadCloud,
+  X,
 } from "lucide-react";
+import { LockSimple } from "@phosphor-icons/react";
+import { useUploadDocumentMutation } from "../../context/api/documents";
 import {
   useGetQuotationsQuery,
   useCreateQuotationMutation,
@@ -29,8 +33,7 @@ import SearchAutocomplete from "../../components/ui/SearchAutocomplete";
 
 export default function QuotationManager() {
   const { user: currentUser } = useSelector((state) => state.auth);
-  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
+  const isReadOnly = false;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlLeadId = searchParams.get("leadId");
@@ -241,6 +244,60 @@ const QuotationList = ({ onView }) => {
 /* =========================================
    FORM VIEW
    ========================================= */
+const InlinePhotoUpload = ({ label, value, onChange, leadId, category }) => {
+  const [uploadDocument, { isLoading }] = useUploadDocumentMutation();
+
+  const handleFileChange = async (e) => {
+    if (!leadId) {
+      alert("Please select a Customer / Lead first before uploading photos.");
+      return;
+    }
+    
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const res = await uploadDocument({ leadId, category, file }).unwrap();
+      // Adjust according to the API response structure (e.g. res.document.url or res.data.document.url)
+      const url = res.document?.url || res.data?.document?.url;
+      if (url) onChange(url);
+    } catch (error) {
+      console.error("Upload failed", error);
+      alert("Upload failed: " + (error?.data?.message || error.message));
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{label}</label>
+      {value ? (
+        <div className="relative w-full h-24 border border-gray-200 dark:border-slate-700 rounded-md overflow-hidden bg-gray-50 dark:bg-slate-800">
+          <img src={value} alt={label} className="w-full h-full object-cover" />
+          <button 
+            type="button" 
+            onClick={() => onChange("")}
+            className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-1 hover:bg-red-600 shadow-sm"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ) : (
+        <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${isLoading ? "opacity-50 pointer-events-none" : ""}`}>
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+          ) : (
+            <>
+              <UploadCloud className="w-5 h-5 text-gray-400 mb-1" />
+              <span className="text-[10px] text-gray-500 font-medium">Upload Photo</span>
+            </>
+          )}
+          <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+        </label>
+      )}
+    </div>
+  );
+};
+
 const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false, initialLeadId = "" }) => {
   // ── Lead search state for this form ──
   const [leadSearch, setLeadSearch] = useState("");
@@ -259,13 +316,14 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
   const isSaving = isCreating || isUpdating;
   const error = createError || updateError;
 
+  const isSubsidyLocked = isEdit && initialData?.subsidy != null && initialData?.subsidy !== "";
+
   const [formData, setFormData] = useState({
     leadId: initialLeadId || "",
     panelType: "", panelName: "", panelSizeWatt: "", numberOfPanels: "",
-    panelWarrantyYears: "", loadKw: "", structure: "", inverterSizeKw: "",
-    inverterWarrantyYears: "", acWire: "", dcWire: "", acdbCompany: "",
-    dcdbCompany: "", dcCableSqMm: "", acCableSqMm: "", quotationValue: "",
-    subsidy: "", dcrStatus: "DCR",
+    inverterWarrantyYears: "", numberOfInverters: "", inverterPhotoUrl: "", panelPhotoUrl: "",
+    acWire: "", dcWire: "", acdbCompany: "", dcdbCompany: "", dcCableSqMm: "", acCableSqMm: "",
+    quotationValue: "", subsidy: "", dcrStatus: "DCR",
   });
 
   useEffect(() => {
@@ -291,7 +349,7 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
     const editableFields = [
       "panelType", "panelName", "panelSizeWatt", "numberOfPanels",
       "panelWarrantyYears", "loadKw", "structure", "inverterSizeKw",
-      "inverterWarrantyYears", "acWire", "dcWire", "acdbCompany",
+      "inverterWarrantyYears", "numberOfInverters", "inverterPhotoUrl", "panelPhotoUrl", "acWire", "dcWire", "acdbCompany",
       "dcdbCompany", "dcCableSqMm", "acCableSqMm", "quotationValue",
       "subsidy", "dcrStatus",
     ];
@@ -310,12 +368,17 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
     if (submissionData.numberOfPanels)      submissionData.numberOfPanels      = parseInt(submissionData.numberOfPanels, 10);
     if (submissionData.panelWarrantyYears)  submissionData.panelWarrantyYears  = parseInt(submissionData.panelWarrantyYears, 10);
     if (submissionData.inverterWarrantyYears) submissionData.inverterWarrantyYears = parseInt(submissionData.inverterWarrantyYears, 10);
+    if (submissionData.numberOfInverters)   submissionData.numberOfInverters   = parseInt(submissionData.numberOfInverters, 10);
     if (submissionData.loadKw)              submissionData.loadKw              = parseFloat(submissionData.loadKw);
     if (submissionData.inverterSizeKw)      submissionData.inverterSizeKw      = parseFloat(submissionData.inverterSizeKw);
     if (submissionData.dcCableSqMm)         submissionData.dcCableSqMm         = parseFloat(submissionData.dcCableSqMm);
     if (submissionData.acCableSqMm)         submissionData.acCableSqMm         = parseFloat(submissionData.acCableSqMm);
     if (submissionData.quotationValue)      submissionData.quotationValue      = parseFloat(submissionData.quotationValue);
     if (submissionData.subsidy)             submissionData.subsidy             = parseFloat(submissionData.subsidy);
+
+    if (isSubsidyLocked) {
+      delete submissionData.subsidy;
+    }
 
     // leadId is only needed for create
     if (!isEdit) submissionData.leadId = formData.leadId;
@@ -386,6 +449,7 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
             <FormSelect label="Panel Size (Watt)" name="panelSizeWatt" value={formData.panelSizeWatt || ""} onChange={handleChange} options={["550 - 575", "535 - 550"]} />
             <FormInput label="Number of Panels" name="numberOfPanels" type="number" value={formData.numberOfPanels || ""} onChange={handleChange} placeholder="0" />
             <FormInput label="Warranty (Years)" name="panelWarrantyYears" type="number" value={formData.panelWarrantyYears || ""} onChange={handleChange} placeholder="25" />
+            <InlinePhotoUpload label="Panel Photo" value={formData.panelPhotoUrl} onChange={(val) => setFormData(p => ({...p, panelPhotoUrl: val}))} leadId={formData.leadId} category="PANEL_PHOTO" />
             <FormInput label="Total Load (kW)" name="loadKw" type="number" step="0.1" value={formData.loadKw || ""} onChange={handleChange} placeholder="5.0" />
           </div>
         </section>
@@ -399,6 +463,8 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
             <FormInput label="Structure Type" name="structure" value={formData.structure || ""} onChange={handleChange} placeholder="e.g., GI Elevated" className="md:col-span-2" />
             <FormInput label="Inverter Size (kW)" name="inverterSizeKw" type="number" step="0.1" value={formData.inverterSizeKw || ""} onChange={handleChange} placeholder="5.0" />
             <FormInput label="Inverter Warranty" name="inverterWarrantyYears" type="number" value={formData.inverterWarrantyYears || ""} onChange={handleChange} placeholder="10" />
+            <FormInput label="Number of Inverters" name="numberOfInverters" type="number" value={formData.numberOfInverters || ""} onChange={handleChange} placeholder="1" />
+            <InlinePhotoUpload label="Inverter Photo" value={formData.inverterPhotoUrl} onChange={(val) => setFormData(p => ({...p, inverterPhotoUrl: val}))} leadId={formData.leadId} category="INVERTER_PHOTO" />
             <FormSelect label="AC Wire Brand" name="acWire" value={formData.acWire || ""} onChange={handleChange} options={componentBrands} />
             <FormSelect label="DC Wire Brand" name="dcWire" value={formData.dcWire || ""} onChange={handleChange} options={componentBrands} />
             <FormSelect label="ACDB Company" name="acdbCompany" value={formData.acdbCompany || ""} onChange={handleChange} options={componentBrands} />
@@ -415,7 +481,7 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormInput label="Quotation Value (₹)" name="quotationValue" type="number" value={formData.quotationValue || ""} onChange={handleChange} placeholder="0.00" icon="₹" />
-            <FormInput label="Expected Subsidy (₹)" name="subsidy" type="number" value={formData.subsidy || ""} onChange={handleChange} placeholder="0.00" icon="₹" />
+            <FormInput label="Expected Subsidy (₹)" name="subsidy" type="number" value={formData.subsidy || ""} onChange={handleChange} placeholder="0.00" icon="₹" disabled={isSubsidyLocked} tooltip={isSubsidyLocked ? "Subsidy is fixed once set." : undefined} />
             <FormSelect label="DCR Status" name="dcrStatus" value={formData.dcrStatus || ""} onChange={handleChange} options={["DCR", "NON_DCR"]} />
           </div>
         </section>
@@ -445,10 +511,11 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
 /* =========================================
    REUSABLE UI COMPONENTS
    ========================================= */
-const FormInput = ({ label, name, value, onChange, type = "text", placeholder, className = "", icon, required, step }) => (
-  <div className={`flex flex-col ${className}`}>
-    <label className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">
-      {label} {required && <span className="text-red-500 dark:text-emerald-500">*</span>}
+const FormInput = ({ label, name, value, onChange, type = "text", placeholder, className = "", icon, required, step, disabled, tooltip }) => (
+  <div className={`flex flex-col ${className}`} title={tooltip}>
+    <label className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+      <span>{label} {required && <span className="text-red-500 dark:text-emerald-500">*</span>}</span>
+      {disabled && tooltip && <LockSimple className="w-4 h-4 text-gray-400" weight="bold" />}
     </label>
     <div className="relative">
       {icon && (
@@ -456,8 +523,8 @@ const FormInput = ({ label, name, value, onChange, type = "text", placeholder, c
           <span className="text-gray-500 dark:text-slate-500 sm:text-sm">{icon}</span>
         </div>
       )}
-      <input type={type} name={name} value={value} onChange={onChange} step={step} required={required} placeholder={placeholder}
-        className={`w-full ${icon ? "pl-7" : "pl-3"} pr-3 py-2 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-md text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-colors shadow-sm`} />
+      <input type={type} name={name} value={value} onChange={onChange} step={step} required={required} placeholder={placeholder} disabled={disabled}
+        className={`w-full ${icon ? "pl-7" : "pl-3"} pr-3 py-2 ${disabled ? "bg-gray-100 dark:bg-slate-800 text-gray-500 cursor-not-allowed" : "bg-white dark:bg-slate-950"} border border-gray-300 dark:border-slate-700 rounded-md text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-colors shadow-sm`} />
     </div>
   </div>
 );
@@ -475,8 +542,7 @@ const FormSelect = ({ label, name, value, onChange, options, className = "" }) =
 
 const QuotationViewer = ({ quoteId, onBack }) => {
   const { user: currentUser } = useSelector((state) => state.auth);
-  const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
+  const isReadOnly = false;
 
   const [isEditing, setIsEditing] = useState(false);
   const { data } = useGetQuotationsQuery({ limit: 100 }); // fetch all for viewer lookup

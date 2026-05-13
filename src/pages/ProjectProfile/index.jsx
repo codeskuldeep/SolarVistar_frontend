@@ -6,18 +6,25 @@ import {
   useUpdateProjectTaskMutation,
   useUpsertGovtApprovalMutation,
   useUpsertSubsidyMutation,
+  useGetDocumentMatrixQuery,
+  useVerifyDocumentMutation,
+  useGetProjectActivityQuery,
 } from "../../context/api/projectsApi";
 import { addToast } from "../../context/slices/toastSlice";
 import { useUploadDocumentMutation, useDeleteDocumentMutation } from "../../context/api/documents";
 import {
   Phone, User, Bank, CheckCircle, CircleNotch, CaretDown,
-  ArrowLeft, WarningCircle, CaretRight, FloppyDisk, Coins,
-  Buildings, Seal, CalendarBlank, UploadSimple, FileText, Trash, Link
+  Buildings, Seal, CalendarBlank, UploadSimple, FileText, Trash, Link,
+  DownloadSimple, Table, ClockCounterClockwise,
+  ArrowLeft,
+  CaretRight,
+  FloppyDisk,
+  Coins
 } from "@phosphor-icons/react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const STAGE_ORDER = ["DOCUMENTATION","TECHNICAL_FINANCIAL","FILE_PREPARATION","GOVT_APPROVALS","SUBSIDY","INSTALLATION"];
+const STAGE_ORDER = ["DOCUMENTATION","TECHNICAL_FINANCIAL","INSTALLATION","FILE_PREPARATION","GOVT_APPROVALS","SUBSIDY"];
 const STAGE_NAMES = {
   DOCUMENTATION: "Documentation", TECHNICAL_FINANCIAL: "Technical & Financial",
   FILE_PREPARATION: "File Preparation", GOVT_APPROVALS: "Govt Approvals",
@@ -49,6 +56,28 @@ const TASKS_WITH_DOCS = [
   "Panels/Inverter Photo", "Final Customer Photo with Plant"
 ];
 
+// Maps task name → document category (must match STAGE_REQUIRED_DOCUMENTS in backend config)
+const TASK_TO_CATEGORY = {
+  "Name Transfer":                   "NAME_TRANSFER_FORM",
+  "Registration":                    "ID_PROOF",
+  "Bank Details Submit":             "BANK_DETAILS",
+  "Site Feasibility Check":          "SITE_FEASIBILITY_REPORT",
+  "Quotation Upload":                "FINAL_QUOTATION",
+  "Model Agreement":                 "MODEL_AGREEMENT",
+  "Loan Process":                    "LOAN_SANCTION",
+  "Joint Inspection":                "JOINT_INSPECTION_REPORT",
+  "Work Completion":                 "WORK_COMPLETION_REPORT",
+  "Net Meter":                       "NET_METER_STAMP",
+  "CMC":                             "CMC_STAMP",
+  "CSV File":                        "CSV_FILE",
+  "Urjas Portal Upload":             "URJAS_NET_METERING",
+  "MPEB Sanction":                   "MPEB_SANCTION",
+  "PM Surya Ghar Portal Upload":     "PM_SURYA_GHAR_DCR",
+  "Sanction Receipt":                "PM_SURYA_GHAR_SANCTION_LETTER",
+  "Panels/Inverter Photo":           "KIT_READY_PHOTO",
+  "Final Customer Photo with Plant": "FINAL_CUSTOMER_PHOTO_WITH_PLANT",
+};
+
 // ─── Shared field style ───────────────────────────────────────────────────────
 const INPUT = "w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
 const LABEL = "block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1";
@@ -59,6 +88,28 @@ export default function ProjectProfile() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { data: project, isLoading, isError, refetch } = useGetProjectByIdQuery(id);
+
+  const handleExport = async (format) => {
+    const BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const token = sessionStorage.getItem("authToken");
+    try {
+      const res = await fetch(`${BASE}/projects/${id}/export?format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const customerName = (project?.lead?.customerName || 'Project').replace(/\s+/g, '_');
+      const shortId = id.slice(0, 8);
+      a.download = `${customerName}_${shortId}.${format === 'pdf' ? 'pdf' : 'csv'}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      dispatch(addToast({ type: "error", message: `Export failed: ${err.message}` }));
+    }
+  };
 
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-slate-950">
@@ -104,15 +155,25 @@ export default function ProjectProfile() {
               </div>
             </div>
           </div>
-          <div className="w-full md:w-56 space-y-1">
-            <div className="flex justify-between text-sm font-medium">
-              <span className="text-gray-500 dark:text-slate-400">Overall Progress</span>
-              <span>{project.progressPercent}%</span>
+          <div className="flex flex-col md:items-end gap-3 w-full md:w-56 shrink-0">
+            <div className="flex items-center gap-2">
+              <button onClick={() => handleExport('pdf')} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-xs font-semibold hover:bg-gray-50 flex items-center gap-1.5">
+                <DownloadSimple size={14} /> PDF
+              </button>
+              <button onClick={() => handleExport('csv')} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-xs font-semibold hover:bg-gray-50 flex items-center gap-1.5">
+                <Table size={14} /> CSV
+              </button>
             </div>
-            <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5">
-              <div className="bg-slate-900 dark:bg-white h-full rounded-full transition-all duration-700" style={{ width: `${project.progressPercent}%` }} />
+            <div className="w-full space-y-1">
+              <div className="flex justify-between text-sm font-medium">
+                <span className="text-gray-500 dark:text-slate-400">Overall Progress</span>
+                <span>{project.progressPercent}%</span>
+              </div>
+              <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5">
+                <div className="bg-slate-900 dark:bg-white h-full rounded-full transition-all duration-700" style={{ width: `${project.progressPercent}%` }} />
+              </div>
+              <p className="text-xs text-gray-400 dark:text-slate-500">Stage: {STAGE_NAMES[project.currentStage]}</p>
             </div>
-            <p className="text-xs text-gray-400 dark:text-slate-500">Stage: {STAGE_NAMES[project.currentStage]}</p>
           </div>
         </header>
 
@@ -135,12 +196,18 @@ export default function ProjectProfile() {
           })}
         </nav>
 
+        {/* Documents Matrix */}
+        <DocumentsMatrix projectId={project.id} />
+
         {/* Stage Panels */}
-        <div className="space-y-12 pb-20">
+        <div className="space-y-12 pb-10">
           {sortedStages.map((stage) => (
             <StagePanel key={stage.id} stage={stage} projectId={project.id} project={project} dispatch={dispatch} />
           ))}
         </div>
+
+        {/* Activity Log */}
+        <ProjectActivityLog projectId={project.id} />
 
       </div>
     </div>
@@ -335,8 +402,9 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      const category = TASK_TO_CATEGORY[task.name] || "OTHER";
                       try {
-                        await uploadDocument({ projectId, taskId: task.id, category: "OTHER", file }).unwrap();
+                        await uploadDocument({ projectId, taskId: task.id, category, file }).unwrap();
                         dispatch(addToast({ type: "success", message: "Document uploaded" }));
                       } catch (err) {
                         dispatch(addToast({ type: "error", message: err.data?.message || "Upload failed" }));
@@ -569,5 +637,145 @@ const SubsidyForm = ({ projectId, dispatch, existing }) => {
         </button>
       </div>
     </div>
+  );
+};
+
+// ─── Documents Matrix ────────────────────────────────────────────────────────
+const DocumentsMatrix = ({ projectId }) => {
+  const { data: matrix, isLoading } = useGetDocumentMatrixQuery(projectId);
+  const [verify, { isLoading: isVerifying }] = useVerifyDocumentMutation();
+  const dispatch = useDispatch();
+
+  if (isLoading) return <div className="animate-pulse h-32 bg-gray-100 dark:bg-slate-800 rounded-xl" />;
+  if (!matrix || matrix.length === 0) return null;
+
+  // Group by stage
+  const byStage = matrix.reduce((acc, item) => {
+    if (!acc[item.stage]) acc[item.stage] = [];
+    acc[item.stage].push(item);
+    return acc;
+  }, {});
+
+  const handleVerify = async (docId) => {
+    try {
+      await verify({ projectId, documentId: docId }).unwrap();
+      dispatch(addToast({ type: "success", message: "Document verified" }));
+    } catch (err) {
+      dispatch(addToast({ type: "error", message: err.data?.message || "Verification failed" }));
+    }
+  };
+
+  return (
+    <section className="mb-10 p-5 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 dark:border-slate-800">
+        <FileText size={18} className="text-indigo-500" />
+        <h3 className="text-base font-semibold tracking-tight">Required Documents Matrix</h3>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {Object.entries(byStage).map(([stageName, docs]) => (
+          <div key={stageName}>
+            <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">{STAGE_NAMES[stageName]}</h4>
+            <div className="space-y-2">
+              {docs.map((doc, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      doc.status === 'UPLOADED' ? 'bg-emerald-500' :
+                      doc.status === 'PENDING_REVIEW' ? 'bg-amber-500' : 'bg-red-500'
+                    }`} />
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {doc.category.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {doc.url && (
+                      <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-blue-600 hover:underline">
+                        View
+                      </a>
+                    )}
+                    {doc.status === 'PENDING_REVIEW' && (
+                      <button 
+                        onClick={() => handleVerify(doc.documentId)}
+                        disabled={isVerifying}
+                        className="px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold rounded uppercase tracking-wide hover:bg-amber-200 transition"
+                      >
+                        Verify
+                      </button>
+                    )}
+                    {doc.status === 'UPLOADED' && (
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] font-bold rounded uppercase tracking-wide flex items-center gap-1">
+                        <CheckCircle size={10} weight="fill" /> Verified
+                      </span>
+                    )}
+                    {doc.status === 'MISSING' && (
+                      <span className="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold rounded uppercase tracking-wide">
+                        Missing
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// ─── Project Activity Log ────────────────────────────────────────────────────
+const ProjectActivityLog = ({ projectId }) => {
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useGetProjectActivityQuery({ projectId, page, limit: 10 });
+
+  if (isLoading && page === 1) return <div className="animate-pulse h-32 bg-gray-100 dark:bg-slate-800 rounded-xl" />;
+  
+  const logs = data?.logs || [];
+  const meta = data?.meta || {};
+
+  return (
+    <section className="mb-10 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-800 flex items-center gap-2">
+        <ClockCounterClockwise size={18} className="text-gray-500" />
+        <h3 className="text-base font-semibold tracking-tight">Project Activity Log</h3>
+      </div>
+      
+      <div className="p-4 space-y-4">
+        {logs.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No activity recorded yet.</p>
+        ) : (
+          logs.map(log => (
+            <div key={log.id} className="flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 text-xs font-bold">
+                {log.user?.name ? log.user.name.charAt(0).toUpperCase() : 'S'}
+              </div>
+              <div>
+                <p className="text-sm text-slate-900 dark:text-white">
+                  <span className="font-semibold">{log.user?.name || 'System'}</span>
+                  <span className="text-gray-500 dark:text-gray-400"> • {log.actionType.replace(/_/g, ' ')}</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {new Date(log.createdAt).toLocaleString()} • {log.entityType}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      
+      {meta.page < Math.ceil(meta.total / meta.limit) && (
+        <div className="p-3 border-t border-gray-100 dark:border-slate-800 text-center">
+          <button 
+            onClick={() => setPage(p => p + 1)} 
+            disabled={isLoading}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+          >
+            {isLoading ? "Loading..." : "Load More"}
+          </button>
+        </div>
+      )}
+    </section>
   );
 };

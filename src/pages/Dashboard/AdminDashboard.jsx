@@ -12,13 +12,14 @@ import {
   FunnelIcon,
   CaretLeftIcon,
   CaretRightIcon,
+  ClockIcon,
 } from "@phosphor-icons/react";
 
 // ==========================================
 // INLINE UI COMPONENTS
 // ==========================================
 
-const KpiCard = ({ title, value, subtitle, icon: Icon, colorScheme, isLoading }) => {
+const KpiCard = ({ title, value, subtitle, icon: Icon, colorScheme, isLoading, onClick }) => {
   const getIconColors = () => {
     switch (colorScheme) {
       case "primary": return "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400";
@@ -32,7 +33,10 @@ const KpiCard = ({ title, value, subtitle, icon: Icon, colorScheme, isLoading })
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+    <div 
+      className={`bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex justify-between items-start mb-4">
         <div className={`p-3 rounded-xl ${getIconColors()}`}>
           <Icon size={24} weight="duotone" />
@@ -128,7 +132,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Unified Pipeline</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Admin Dashboard</h2>
           <p className="text-gray-500 dark:text-gray-400 font-medium mt-1">
             Master overview of all Leads and Projects.
           </p>
@@ -136,13 +140,21 @@ export default function AdminDashboard() {
       </div>
 
       {/* KPI Cards Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <KpiCard title="Total Leads" value={totalLeads} subtitle="All time leads generated" icon={UsersThreeIcon} colorScheme="primary" isLoading={isStatsLoading} />
-        <KpiCard title="Active Customers" value={activeCustomers} subtitle="Projects currently in progress" icon={ProjectorScreenChartIcon} colorScheme="secondary" isLoading={isStatsLoading} />
-        <KpiCard title="Projects in Operations" value={projectsInOps} subtitle="Docs, Tech/Fin, File Prep stages" icon={WrenchIcon} colorScheme="tertiary" isLoading={isStatsLoading} />
-        <KpiCard title="Installation Pending" value={installationPending} subtitle="Projects ready for installation" icon={SunHorizonIcon} colorScheme="quaternary" isLoading={isStatsLoading} />
-        <KpiCard title="Subsidy Pending" value={subsidyPending} subtitle="Projects awaiting subsidy disbursement" icon={BankIcon} colorScheme="purple" isLoading={isStatsLoading} />
-        <KpiCard title="Completed Projects" value={completedProjects} subtitle="Fully commissioned projects" icon={CheckCircleIcon} colorScheme="success" isLoading={isStatsLoading} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+        <KpiCard title="Total Leads" value={totalLeads} subtitle="All time leads generated" icon={UsersThreeIcon} colorScheme="primary" isLoading={isStatsLoading} onClick={() => navigate('/leads')} />
+        <KpiCard title="Active Customers" value={activeCustomers} subtitle="Projects currently in progress" icon={ProjectorScreenChartIcon} colorScheme="secondary" isLoading={isStatsLoading} onClick={() => navigate('/customers')} />
+        <KpiCard title="Projects in Operations" value={projectsInOps} subtitle="Docs, Tech/Fin, File Prep stages" icon={WrenchIcon} colorScheme="tertiary" isLoading={isStatsLoading} onClick={() => navigate('/admin/projects-in-ops')} />
+        <KpiCard title="Installation Pending" value={installationPending} subtitle="Projects ready for installation" icon={SunHorizonIcon} colorScheme="quaternary" isLoading={isStatsLoading} onClick={() => navigate('/admin/installation-pending')} />
+        <KpiCard title="Subsidy Pending" value={subsidyPending} subtitle="Projects awaiting subsidy disbursement" icon={BankIcon} colorScheme="purple" isLoading={isStatsLoading} onClick={() => navigate('/admin/subsidy-pending')} />
+        <KpiCard title="Completed Projects" value={completedProjects} subtitle="Fully commissioned projects" icon={CheckCircleIcon} colorScheme="success" isLoading={isStatsLoading} onClick={() => navigate('/admin/completed-projects')} />
+        <KpiCard 
+          title="Pendency" 
+          value="View" 
+          subtitle="Delayed & aging items" 
+          icon={ClockIcon} 
+          colorScheme="tertiary" 
+          onClick={() => navigate('/admin/pendency')} 
+        />
       </div>
 
       {/* Unified Table Section */}
