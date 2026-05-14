@@ -4,7 +4,7 @@ export const projectsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // GET /projects
     getProjects: builder.query({
-      query: ({ page = 1, limit = 10, search = "", status = "", currentStage = "", assignedTeam = "" } = {}) => ({
+      query: ({ page = 1, limit = 10, search = "", status = "", currentStage = "", assignedTeam = "", leadId = "" } = {}) => ({
         url: "/projects",
         params: { 
           page, 
@@ -12,7 +12,8 @@ export const projectsApi = baseApi.injectEndpoints({
           ...(search ? { search } : {}),
           ...(status ? { status } : {}),
           ...(currentStage ? { currentStage } : {}),
-          ...(assignedTeam ? { assignedTeam } : {})
+          ...(assignedTeam ? { assignedTeam } : {}),
+          ...(leadId ? { leadId } : {}),
         },
       }),
       transformResponse: (response) => ({
@@ -66,6 +67,17 @@ export const projectsApi = baseApi.injectEndpoints({
       query: (id) => `/projects/${id}/timeline`,
       transformResponse: (response) => response.data.timeline,
       providesTags: (_result, _error, id) => [{ type: "Project", id: `TIMELINE_${id}` }],
+    }),
+
+    // POST /projects — create a new project for a converted lead
+    createProject: builder.mutation({
+      query: ({ leadId }) => ({
+        url: "/projects",
+        method: "POST",
+        body: { leadId },
+      }),
+      transformResponse: (response) => response.data.project,
+      invalidatesTags: [{ type: "Project", id: "LIST" }],
     }),
 
     // PATCH /projects/:projectId/tasks/:taskId
@@ -202,6 +214,7 @@ export const {
   useGetProjectPendencyQuery,
   useGetProjectByIdQuery,
   useGetProjectTimelineQuery,
+  useCreateProjectMutation,
   useUpdateProjectTaskMutation,
   useUpsertGovtApprovalMutation,
   useUnlinkProjectTaskDocumentMutation,

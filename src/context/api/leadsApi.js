@@ -4,9 +4,9 @@ export const leadsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // GET /leads — paginated + searchable
     getLeads: builder.query({
-      query: ({ page = 1, limit = 10, search = "" } = {}) => ({
+      query: ({ page = 1, limit = 10, search = "", status = "" } = {}) => ({
         url: "/leads",
-        params: { page, limit, ...(search ? { search } : {}) },
+        params: { page, limit, ...(search ? { search } : {}), ...(status ? { status } : {}) },
       }),
       // Transform to flatten the nested response shape
       transformResponse: (response) => ({

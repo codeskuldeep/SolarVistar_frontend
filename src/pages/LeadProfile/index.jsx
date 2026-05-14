@@ -277,13 +277,18 @@ const LeadProfile = () => {
                 {lead.status.replace(/_/g, " ")}
               </span>
               <span className="text-xs text-gray-400 font-mono">ID: {lead.id}</span>
-              {lead.project && (
-                <button
-                  onClick={() => navigate(`/projects/${lead.project.id}`)}
-                  className="mt-1 px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
-                >
-                  View Project →
-                </button>
+              {lead.projects && lead.projects.length > 0 && (
+                <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                  {lead.projects.map((project, i) => (
+                    <button
+                      key={project.id}
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                      className="mt-1 px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                    >
+                      Project {i + 1} → {project.currentStage?.replace(/_/g, " ")} ({project.progressPercent}%)
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>
