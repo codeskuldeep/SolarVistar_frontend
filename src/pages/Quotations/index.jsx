@@ -323,7 +323,7 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
     panelType: "", panelName: "", panelSizeWatt: "", numberOfPanels: "",
     inverterWarrantyYears: "", numberOfInverters: "", inverterPhotoUrl: "", panelPhotoUrl: "",
     acWire: "", dcWire: "", acdbCompany: "", dcdbCompany: "", dcCableSqMm: "", acCableSqMm: "",
-    quotationValue: "", subsidy: "", dcrStatus: "DCR",
+    quotationValue: "", subsidy: "78000", dcrStatus: "DCR",
   });
 
   useEffect(() => {
@@ -481,7 +481,7 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormInput label="Quotation Value (₹)" name="quotationValue" type="number" value={formData.quotationValue || ""} onChange={handleChange} placeholder="0.00" icon="₹" />
-            <FormInput label="Expected Subsidy (₹)" name="subsidy" type="number" value={formData.subsidy || ""} onChange={handleChange} placeholder="0.00" icon="₹" disabled={isSubsidyLocked} tooltip={isSubsidyLocked ? "Subsidy is fixed once set." : undefined} />
+            <FormInput label="Expected Subsidy (₹)" name="subsidy" type="number" value={formData.subsidy || ""} onChange={handleChange} placeholder="78000.00" icon="₹" disabled={true} tooltip={true ? "Subsidy is fixed once set." : undefined} />
             <FormSelect label="DCR Status" name="dcrStatus" value={formData.dcrStatus || ""} onChange={handleChange} options={["DCR", "NON_DCR"]} />
           </div>
         </section>

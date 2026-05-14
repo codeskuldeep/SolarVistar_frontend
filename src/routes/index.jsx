@@ -2,12 +2,13 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import Login from "../pages/Login"; // Adjust path if needed
 import ProtectedRoute from "./ProtectedRoutes";
 import DashboardLayout from "../components/layout/DashboardLayout"; // 👈 Import Layout
-import UserManagement from "../pages/UserManagement"; // Placeholder for future user management page
+import UserManagement from "../pages/UserManagement";
 import Leads from "../pages/Leads";
 import Visits from "../pages/Visits";
-import Overview from "../pages/Dashboard"; // Import the new Dashboard component
+import Overview from "../pages/Dashboard";
 import QuotationManager from "../pages/Quotations";
 import ExistingCustomers from "../pages/Customers";
+import CustomerProfile from "../pages/CustomerProfile";
 import LeadDocuments from "../components/LeadDocuments";
 import Profile from "../pages/Profile";
 import LeadProfile from "../pages/LeadProfile";
@@ -70,8 +71,8 @@ export const router = createBrowserRouter([
             element: <LeadProfile />,
           },
           {
-            path: "customers/:id/profile",
-            element: <LeadProfile />,
+            path: "customers/:leadId",
+            element: <CustomerProfile />,
           },
           {
             path: "projects/:id",
