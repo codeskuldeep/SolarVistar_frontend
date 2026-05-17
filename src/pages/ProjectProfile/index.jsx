@@ -24,7 +24,7 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const STAGE_ORDER = ["DOCUMENTATION","TECHNICAL_FINANCIAL","INSTALLATION","FILE_PREPARATION","GOVT_APPROVALS","SUBSIDY"];
+const STAGE_ORDER = ["DOCUMENTATION", "TECHNICAL_FINANCIAL", "INSTALLATION", "FILE_PREPARATION", "GOVT_APPROVALS", "SUBSIDY"];
 const STAGE_NAMES = {
   DOCUMENTATION: "Documentation", TECHNICAL_FINANCIAL: "Technical & Financial",
   FILE_PREPARATION: "File Preparation", GOVT_APPROVALS: "Govt Approvals",
@@ -32,9 +32,9 @@ const STAGE_NAMES = {
 };
 const STATUS_CONFIG = {
   NOT_STARTED: { label: "Not Started", theme: "text-gray-600 bg-gray-100 ring-gray-200 dark:bg-slate-800 dark:text-gray-400 dark:ring-slate-700" },
-  IN_PROGRESS:  { label: "In Progress", theme: "text-blue-700 bg-blue-50 ring-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:ring-blue-800" },
-  DELAYED:      { label: "Delayed",     theme: "text-red-700 bg-red-50 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800" },
-  COMPLETED:    { label: "Completed",   theme: "text-emerald-700 bg-emerald-50 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-800" },
+  IN_PROGRESS: { label: "In Progress", theme: "text-blue-700 bg-blue-50 ring-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:ring-blue-800" },
+  DELAYED: { label: "Delayed", theme: "text-red-700 bg-red-50 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800" },
+  COMPLETED: { label: "Completed", theme: "text-emerald-700 bg-emerald-50 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-800" },
 };
 
 // Must exactly match SubsidyStatus enum in schema.prisma
@@ -42,8 +42,8 @@ const SUBSIDY_STATUSES = ["NOT_APPLIED", "APPLIED", "REDEEMED", "DISBURSED"];
 
 // Must exactly match PortalName enum in schema.prisma
 const PORTAL_NAMES = [
-  { value: "URJAS",        label: "URJAS" },
-  { value: "MPEB",         label: "MPEB" },
+  { value: "URJAS", label: "URJAS" },
+  { value: "MPEB", label: "MPEB" },
   { value: "PM_SURYA_GHAR", label: "PM Surya Ghar" },
 ];
 
@@ -58,23 +58,23 @@ const TASKS_WITH_DOCS = [
 
 // Maps task name → document category (must match STAGE_REQUIRED_DOCUMENTS in backend config)
 const TASK_TO_CATEGORY = {
-  "Name Transfer":                   "NAME_TRANSFER_FORM",
-  "Registration":                    "ID_PROOF",
-  "Bank Details Submit":             "BANK_DETAILS",
-  "Site Feasibility Check":          "SITE_FEASIBILITY_REPORT",
-  "Quotation Upload":                "FINAL_QUOTATION",
-  "Model Agreement":                 "MODEL_AGREEMENT",
-  "Loan Process":                    "LOAN_SANCTION",
-  "Joint Inspection":                "JOINT_INSPECTION_REPORT",
-  "Work Completion":                 "WORK_COMPLETION_REPORT",
-  "Net Meter":                       "NET_METER_STAMP",
-  "CMC":                             "CMC_STAMP",
-  "CSV File":                        "CSV_FILE",
-  "Urjas Portal Upload":             "URJAS_NET_METERING",
-  "MPEB Sanction":                   "MPEB_SANCTION",
-  "PM Surya Ghar Portal Upload":     "PM_SURYA_GHAR_DCR",
-  "Sanction Receipt":                "PM_SURYA_GHAR_SANCTION_LETTER",
-  "Panels/Inverter Photo":           "KIT_READY_PHOTO",
+  "Name Transfer": "NAME_TRANSFER_FORM",
+  "Registration": "ID_PROOF",
+  "Bank Details Submit": "BANK_DETAILS",
+  "Site Feasibility Check": "SITE_FEASIBILITY_REPORT",
+  "Quotation Upload": "FINAL_QUOTATION",
+  "Model Agreement": "MODEL_AGREEMENT",
+  "Loan Process": "LOAN_SANCTION",
+  "Joint Inspection": "JOINT_INSPECTION_REPORT",
+  "Work Completion": "WORK_COMPLETION_REPORT",
+  "Net Meter": "NET_METER_STAMP",
+  "CMC": "CMC_STAMP",
+  "CSV File": "CSV_FILE",
+  "Urjas Portal Upload": "URJAS_NET_METERING",
+  "MPEB Sanction": "MPEB_SANCTION",
+  "PM Surya Ghar Portal Upload": "PM_SURYA_GHAR_DCR",
+  "Sanction Receipt": "PM_SURYA_GHAR_SANCTION_LETTER",
+  "Panels/Inverter Photo": "KIT_READY_PHOTO",
   "Final Customer Photo with Plant": "FINAL_CUSTOMER_PHOTO_WITH_PLANT",
 };
 
@@ -186,8 +186,8 @@ export default function ProjectProfile() {
               <button key={stage.id} onClick={() => scrollToStage(stage.id)}
                 className={`flex flex-col items-start px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide whitespace-nowrap transition-colors min-w-[100px] flex-1
                   ${isActive ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400"
-                  : isCompleted ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-                  : "bg-gray-50 text-gray-400 dark:bg-slate-900 dark:text-slate-500 hover:bg-gray-100"}`}
+                    : isCompleted ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
+                      : "bg-gray-50 text-gray-400 dark:bg-slate-900 dark:text-slate-500 hover:bg-gray-100"}`}
               >
                 <span>{STAGE_NAMES[stage.name]}</span>
                 <div className={`mt-1.5 h-0.5 w-full rounded-full ${isCompleted ? "bg-emerald-500" : isActive ? "bg-indigo-500" : "bg-gray-200 dark:bg-slate-700"}`} />
@@ -195,6 +195,9 @@ export default function ProjectProfile() {
             );
           })}
         </nav>
+
+        {/* Warranty Tracking Bar */}
+        <WarrantyProgressBar amcRecord={project.amcRecord} />
 
         {/* Documents Matrix */}
         <DocumentsMatrix projectId={project.id} />
@@ -274,7 +277,7 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
   const [updateTask, { isLoading: isUpdating }] = useUpdateProjectTaskMutation();
   const [uploadDocument, { isLoading: isUploadingDoc }] = useUploadDocumentMutation();
   const [deleteDocument, { isLoading: isDeletingDoc }] = useDeleteDocumentMutation();
-  
+
   const [optimisticStatus, setOptimisticStatus] = useState(task.status);
   const [expanded, setExpanded] = useState(false);
   const [remarks, setRemarks] = useState(task.remarks || "");
@@ -394,10 +397,10 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">Attached Documents</span>
                 <div>
-                  <input 
-                    type="file" 
-                    id={`upload-${task.id}`} 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    id={`upload-${task.id}`}
+                    className="hidden"
                     disabled={isUploadingDoc}
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
@@ -409,7 +412,7 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
                       } catch (err) {
                         dispatch(addToast({ type: "error", message: err.data?.message || "Upload failed" }));
                       }
-                    }} 
+                    }}
                   />
                   <label htmlFor={`upload-${task.id}`} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition ${isUploadingDoc ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     {isUploadingDoc ? <CircleNotch size={14} className="animate-spin" /> : <UploadSimple size={14} />}
@@ -435,7 +438,7 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
                           </p>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={async () => {
                           if (confirm("Are you sure you want to delete this document?")) {
                             try {
@@ -671,7 +674,7 @@ const DocumentsMatrix = ({ projectId }) => {
         <FileText size={18} className="text-indigo-500" />
         <h3 className="text-base font-semibold tracking-tight">Required Documents Matrix</h3>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Object.entries(byStage).map(([stageName, docs]) => (
           <div key={stageName}>
@@ -680,15 +683,14 @@ const DocumentsMatrix = ({ projectId }) => {
               {docs.map((doc, idx) => (
                 <div key={idx} className="flex items-center justify-between p-2 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      doc.status === 'UPLOADED' ? 'bg-emerald-500' :
+                    <div className={`w-2 h-2 rounded-full ${doc.status === 'UPLOADED' ? 'bg-emerald-500' :
                       doc.status === 'PENDING_REVIEW' ? 'bg-amber-500' : 'bg-red-500'
-                    }`} />
+                      }`} />
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       {doc.category.replace(/_/g, ' ')}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     {doc.url && (
                       <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-blue-600 hover:underline">
@@ -696,7 +698,7 @@ const DocumentsMatrix = ({ projectId }) => {
                       </a>
                     )}
                     {doc.status === 'PENDING_REVIEW' && (
-                      <button 
+                      <button
                         onClick={() => handleVerify(doc.documentId)}
                         disabled={isVerifying}
                         className="px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold rounded uppercase tracking-wide hover:bg-amber-200 transition"
@@ -731,7 +733,7 @@ const ProjectActivityLog = ({ projectId }) => {
   const { data, isLoading } = useGetProjectActivityQuery({ projectId, page, limit: 10 });
 
   if (isLoading && page === 1) return <div className="animate-pulse h-32 bg-gray-100 dark:bg-slate-800 rounded-xl" />;
-  
+
   const logs = data?.logs || [];
   const meta = data?.meta || {};
 
@@ -741,7 +743,7 @@ const ProjectActivityLog = ({ projectId }) => {
         <ClockCounterClockwise size={18} className="text-gray-500" />
         <h3 className="text-base font-semibold tracking-tight">Project Activity Log</h3>
       </div>
-      
+
       <div className="p-4 space-y-4">
         {logs.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-4">No activity recorded yet.</p>
@@ -764,11 +766,11 @@ const ProjectActivityLog = ({ projectId }) => {
           ))
         )}
       </div>
-      
+
       {meta.page < Math.ceil(meta.total / meta.limit) && (
         <div className="p-3 border-t border-gray-100 dark:border-slate-800 text-center">
-          <button 
-            onClick={() => setPage(p => p + 1)} 
+          <button
+            onClick={() => setPage(p => p + 1)}
             disabled={isLoading}
             className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
           >
@@ -776,6 +778,94 @@ const ProjectActivityLog = ({ projectId }) => {
           </button>
         </div>
       )}
+    </section>
+  );
+};
+
+// ─── Warranty Progress Bar ───────────────────────────────────────────────────
+const WarrantyProgressBar = ({ amcRecord }) => {
+  if (!amcRecord) return null;
+
+  const start = new Date(amcRecord.startDate);
+  const end = new Date(amcRecord.endDate);
+  const now = new Date();
+
+  const totalDays = (end - start) / (1000 * 60 * 60 * 24);
+  const elapsedDays = (now - start) / (1000 * 60 * 60 * 24);
+  const percentage = Math.max(0, Math.min((elapsedDays / totalDays) * 100, 100));
+
+  // Status color logic
+  const isExpired = percentage >= 100 || amcRecord.status === 'EXPIRED';
+  const isWarning = percentage > 90 && !isExpired;
+  const barColor = isExpired ? 'bg-red-500' : (isWarning ? 'bg-amber-400' : 'bg-emerald-500');
+
+  // Math for human readable remaining time
+  const remainingDays = Math.max(0, Math.floor(totalDays - elapsedDays));
+  const remainingYears = Math.floor(remainingDays / 365);
+  const remainingMonths = Math.floor((remainingDays % 365) / 30);
+
+  let remainingText = "";
+  if (isExpired) {
+    remainingText = "Warranty Expired";
+  } else if (remainingYears > 0) {
+    remainingText = `${remainingYears} Yr ${remainingMonths > 0 ? remainingMonths + ' Mo' : ''} Remaining`;
+  } else {
+    remainingText = `${remainingMonths} Months Remaining`;
+  }
+
+  return (
+    <section className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm relative overflow-hidden mb-10">
+      {/* Decorative background glow */}
+      <div className={`absolute top-0 right-0 w-64 h-64 -mr-32 -mt-32 rounded-full blur-3xl opacity-20 pointer-events-none ${isExpired ? 'bg-red-500' : isWarning ? 'bg-amber-400' : 'bg-emerald-500'}`}></div>
+
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4 relative z-10">
+        <div>
+          <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2 mb-1">
+            <Seal className={isExpired ? "text-red-500" : "text-emerald-500"} weight="fill" size={24} />
+            5-Year System Warranty
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
+            Standard comprehensive warranty post-installation.
+          </p>
+        </div>
+
+        <div className={`px-3 py-1 rounded-full text-xs font-bold ring-1 ring-inset whitespace-nowrap ${isExpired
+            ? 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800'
+            : 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-800'
+          }`}>
+          {isExpired ? 'EXPIRED' : 'ACTIVE'} • {remainingText}
+        </div>
+      </div>
+
+      {/* Progress Bar Track */}
+      <div className="relative z-10">
+        <div className="h-4 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner dark:bg-slate-800">
+          <div
+            className={`relative h-full transition-all duration-1000 ease-out ${barColor}`}
+            style={{ width: `${percentage}%` }}
+          >
+            {/* Shimmer effect */}
+            <div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent bg-[length:200%_100%]"
+              style={{ animation: 'shimmer 2s infinite linear' }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Labels */}
+        <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 font-semibold uppercase tracking-wider mt-2 px-1">
+          <span>Started: {start.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          <span>Ends: {end.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+        </div>
+      </div>
+
+      {/* Single Keyframe Definition */}
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
     </section>
   );
 };
