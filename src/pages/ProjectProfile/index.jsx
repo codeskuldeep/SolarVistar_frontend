@@ -51,9 +51,9 @@ const PORTAL_NAMES = [
 const TASKS_WITH_DOCS = [
   "Name Transfer", "Registration", "Bank Details Submit",
   "Site Feasibility Check", "Quotation Upload", "Model Agreement", "Loan Process",
-  "Joint Inspection", "Work Completion", "Net Meter", "CMC", "CSV File",
+  "Joint Inspection", "Work Completion", "Net Meter", "CMC", "CSV File", "DCR Certificate",
   "Urjas Portal Upload", "MPEB Sanction", "PM Surya Ghar Portal Upload", "Sanction Receipt",
-  "Panels/Inverter Photo", "Final Customer Photo with Plant"
+  "Panels/Inverter Photo", "Material Photos", "Final Customer Photo with Plant"
 ];
 
 // Maps task name → document category (must match STAGE_REQUIRED_DOCUMENTS in backend config)
@@ -70,12 +70,19 @@ const TASK_TO_CATEGORY = {
   "Net Meter": "NET_METER_STAMP",
   "CMC": "CMC_STAMP",
   "CSV File": "CSV_FILE",
+  "DCR Certificate": "DCR_CERTIFICATE",
   "Urjas Portal Upload": "URJAS_NET_METERING",
   "MPEB Sanction": "MPEB_SANCTION",
   "PM Surya Ghar Portal Upload": "PM_SURYA_GHAR_DCR",
   "Sanction Receipt": "PM_SURYA_GHAR_SANCTION_LETTER",
   "Panels/Inverter Photo": "KIT_READY_PHOTO",
+  "Material Photos": "MATERIAL_PHOTOS",
   "Final Customer Photo with Plant": "FINAL_CUSTOMER_PHOTO_WITH_PLANT",
+};
+
+// Restricts accepted file types per task (undefined = all allowed types)
+const TASK_FILE_ACCEPT = {
+  "Material Photos": "image/jpeg,image/png",
 };
 
 // ─── Shared field style ───────────────────────────────────────────────────────
@@ -252,9 +259,9 @@ const StagePanel = ({ stage, projectId, project, dispatch }) => {
       )}
 
       <div className="space-y-2">
-        {stage.tasks?.length === 0
+        {stage.tasks?.filter(t => t.name !== "3D Site Photos").length === 0
           ? <p className="py-6 text-gray-400 dark:text-slate-500 text-sm italic">No tasks assigned.</p>
-          : stage.tasks.map(task => (
+          : stage.tasks.filter(t => t.name !== "3D Site Photos").map(task => (
             <TaskRow
               key={task.id}
               task={task}
@@ -402,6 +409,7 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
                     id={`upload-${task.id}`}
                     className="hidden"
                     disabled={isUploadingDoc}
+                    accept={TASK_FILE_ACCEPT[task.name]}
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;

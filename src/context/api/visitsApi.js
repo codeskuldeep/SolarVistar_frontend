@@ -45,6 +45,20 @@ export const visitsApi = baseApi.injectEndpoints({
         { type: "Visit", id: "LIST" },
       ],
     }),
+    // PATCH /visits/:id/status — also used to save solarNotes / inverterNotes
+    updateVisitNotes: builder.mutation({
+      query: ({ id, solarNotes, inverterNotes }) => ({
+        url: `/visits/${id}/status`,
+        method: "PATCH",
+        body: { solarNotes, inverterNotes },
+      }),
+      transformResponse: (response) => response.data.visit,
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Visit", id },
+        { type: "Visit", id: "LIST" },
+      ],
+    }),
+
     // PATCH /visits/:id/location
     // force=true allows overwriting an already-set location (explicit user action)
     updateVisitLocation: builder.mutation({
@@ -67,5 +81,6 @@ export const {
   useGetVisitsQuery,
   useCreateVisitMutation,
   useUpdateVisitMutation,
+  useUpdateVisitNotesMutation,
   useUpdateVisitLocationMutation,
 } = visitsApi;

@@ -89,6 +89,48 @@ export const projectsApi = baseApi.injectEndpoints({
       }),
       // Backend returns null for data.task — just return the raw response to avoid crash
       transformResponse: (response) => response.data ?? null,
+      // Optimistically update stage status so the next stage unlocks immediately,
+      // without waiting for the async cache refetch (~50-200ms window causes locked UI).
+      async onQueryStarted({ projectId, taskId, updateData }, { dispatch, queryFulfilled }) {
+        const STAGE_ORDER = [
+          "DOCUMENTATION", "TECHNICAL_FINANCIAL", "INSTALLATION",
+          "FILE_PREPARATION", "GOVT_APPROVALS", "SUBSIDY",
+        ];
+
+        const patchResult = dispatch(
+          projectsApi.util.updateQueryData("getProjectById", projectId, (draft) => {
+            for (const stage of draft.stages) {
+              const task = stage.tasks?.find((t) => t.id === taskId);
+              if (!task) continue;
+
+              task.status = updateData.status;
+
+              if (updateData.status === "COMPLETED") {
+                const allDone = stage.tasks.every((t) =>
+                  t.id === taskId ? true : t.status === "COMPLETED"
+                );
+                if (allDone) {
+                  stage.status = "COMPLETED";
+                  const nextName = STAGE_ORDER[STAGE_ORDER.indexOf(stage.name) + 1];
+                  if (nextName) {
+                    const next = draft.stages.find((s) => s.name === nextName);
+                    if (next && next.status === "NOT_STARTED") {
+                      next.status = "IN_PROGRESS";
+                    }
+                  }
+                }
+              }
+              break;
+            }
+          })
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (_result, _error, { projectId }) => [
         { type: "Project", id: projectId },
         { type: "Project", id: "LIST" },

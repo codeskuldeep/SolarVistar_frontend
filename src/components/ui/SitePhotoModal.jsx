@@ -6,7 +6,7 @@ import {
   useUploadVisitDocumentMutation,
   useDeleteDocumentMutation,
 } from "../../context/api/documents";
-import { useUpdateVisitLocationMutation } from "../../context/api/visitsApi";
+import { useUpdateVisitLocationMutation, useUpdateVisitNotesMutation } from "../../context/api/visitsApi";
 import { addToast } from "../../context/slices/toastSlice";
 import {
   XIcon,
@@ -228,7 +228,7 @@ const reverseGeocode = async (lat, lng) => {
 };
 
 // ─── Category Section Panel ──────────────────────────────────────────────────
-const CategorySection = ({ section, docs, visitId, onRequestLocation, locationLabel, isReadOnly }) => {
+const CategorySection = ({ section, docs, visitId, onRequestLocation, locationLabel, isReadOnly, notes, onNotesChange, onNotesSave, isSavingNotes }) => {
   const dispatch = useDispatch();
   const fileInputRef = useRef(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -340,18 +340,95 @@ const CategorySection = ({ section, docs, visitId, onRequestLocation, locationLa
             </button>
           </div>
         )}
+
+        {/* Key-Value detail inputs — shown only for Solar Panels and Inverter sections */}
+        {notes && (
+          <div className="mt-3 pt-3 border-t border-black/10 dark:border-white/10 space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Details</p>
+            {notes.map((row, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  type="text"
+                  value={row.key}
+                  onChange={(e) => onNotesChange(i, "key", e.target.value)}
+                  placeholder="Field name"
+                  disabled={isReadOnly}
+                  className="w-2/5 px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-current focus:border-transparent disabled:opacity-60"
+                />
+                <input
+                  type="text"
+                  value={row.value}
+                  onChange={(e) => onNotesChange(i, "value", e.target.value)}
+                  placeholder="Value"
+                  disabled={isReadOnly}
+                  className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-current focus:border-transparent disabled:opacity-60"
+                />
+              </div>
+            ))}
+            {!isReadOnly && (
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={onNotesSave}
+                  disabled={isSavingNotes}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 disabled:opacity-50 transition"
+                >
+                  {isSavingNotes
+                    ? <span className="inline-block w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin" />
+                    : null
+                  }
+                  {isSavingNotes ? "Saving…" : "Save Details"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
 };
+
+const EMPTY_NOTES = () => [{ key: "", value: "" }, { key: "", value: "" }];
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 const SitePhotoModal = ({ visit, onClose }) => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
   const isReadOnly = dept === "OPERATIONS DEPARTMENT";
+  const dispatch = useDispatch();
 
   const [activeSection, setActiveSection] = useState("pre");
+
+  const [solarNotes, setSolarNotes] = useState(() =>
+    Array.isArray(visit.solarNotes) && visit.solarNotes.length === 2
+      ? visit.solarNotes
+      : EMPTY_NOTES()
+  );
+  const [inverterNotes, setInverterNotes] = useState(() =>
+    Array.isArray(visit.inverterNotes) && visit.inverterNotes.length === 2
+      ? visit.inverterNotes
+      : EMPTY_NOTES()
+  );
+
+  const [updateVisitNotes, { isLoading: isSavingNotes }] = useUpdateVisitNotesMutation();
+
+  const handleNotesChange = (section, i, field, val) => {
+    const setter = section === "post_panels" ? setSolarNotes : setInverterNotes;
+    setter((prev) => prev.map((row, idx) => idx === i ? { ...row, [field]: val } : row));
+  };
+
+  const handleNotesSave = async (section) => {
+    try {
+      if (section === "post_panels") {
+        await updateVisitNotes({ id: visit.id, solarNotes }).unwrap();
+      } else {
+        await updateVisitNotes({ id: visit.id, inverterNotes }).unwrap();
+      }
+      dispatch(addToast({ message: "Details saved", type: "success" }));
+    } catch {
+      dispatch(addToast({ message: "Failed to save details", type: "error" }));
+    }
+  };
   // Helper to parse location
   const parseLocation = (locStr) => {
     if (!locStr) return null;
@@ -520,6 +597,14 @@ const SitePhotoModal = ({ visit, onClose }) => {
               onRequestLocation={handleRequestLocation}
               locationLabel={locationData?.tagName}
               isReadOnly={isReadOnly}
+              notes={
+                currentSection.id === "post_panels" ? solarNotes
+                : currentSection.id === "post_inverter" ? inverterNotes
+                : null
+              }
+              onNotesChange={(i, field, val) => handleNotesChange(currentSection.id, i, field, val)}
+              onNotesSave={() => handleNotesSave(currentSection.id)}
+              isSavingNotes={isSavingNotes}
             />
           )}
         </div>

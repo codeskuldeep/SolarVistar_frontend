@@ -15,6 +15,7 @@ const DOCUMENT_CHECKLIST = [
   { category: "BANK_PASSBOOK", label: "Bank Passbook", hint: "Financial detail" },
   { category: "PROPERTY_DOC", label: "Property Documents (Registry / Tax Document)", hint: "Ownership proof" },
   { category: "ELECTRICITY_BILL", label: "Electricity Bill", hint: "Must be in PDF format", accept: "application/pdf" },
+  { category: "3D_SITE_PHOTOS", label: "3D Site Photos", hint: "Must be in PDF format", accept: "application/pdf" },
 ];
 
 const formatBytes = (bytes = 0) => {
@@ -78,10 +79,11 @@ const LeadDocuments = () => {
     event.target.value = "";
     if (!file) return;
 
-    if (category === "ELECTRICITY_BILL" && file.type !== "application/pdf") {
+    const checklist = DOCUMENT_CHECKLIST.find((d) => d.category === category);
+    if (checklist?.accept === "application/pdf" && file.type !== "application/pdf") {
       setRowError((e) => ({
         ...e,
-        [category]: "Electricity Bill must be in PDF format.",
+        [category]: `${checklist.label} must be in PDF format.`,
       }));
       return;
     }
@@ -223,7 +225,7 @@ const LeadDocuments = () => {
           {/* List */}
           {!isLoading && !isError && (
             <ul role="list" className="flex flex-col gap-2.5">
-              {DOCUMENT_CHECKLIST.map(({ category, label, hint }) => {
+              {DOCUMENT_CHECKLIST.map(({ category, label, hint, accept }) => {
                 const doc = documentsByCategory[category];
                 const isBusy = busyCategory === category;
                 const isUploading = isBusy && busyAction === "upload";
@@ -312,7 +314,7 @@ const LeadDocuments = () => {
                         type="file"
                         className="hidden"
                         onChange={(e) => handleFileSelected(category, e)}
-                        accept={category === "ELECTRICITY_BILL" ? ".pdf,application/pdf" : ".pdf,.jpg,.jpeg,.png,.webp"}
+                        accept={accept === "application/pdf" ? ".pdf,application/pdf" : ".pdf,.jpg,.jpeg,.png,.webp"}
                         aria-label={`Upload ${label}`}
                       />
 
