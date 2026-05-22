@@ -60,7 +60,7 @@ const QuotationPDFTemplate = ({ quote = {} }) => {
         </div>
         <div>
           <h1 className="font-serif text-xl font-bold leading-tight tracking-wide">
-            Solar Vistar
+            Solar Power Vistar Co-operative Society
           </h1>
           <p className="text-[0.55rem] uppercase tracking-widest text-[#ffddb4]">
             Renewable Energy Solutions
@@ -81,7 +81,7 @@ const QuotationPDFTemplate = ({ quote = {} }) => {
   const PageFooter = ({ pageNum, totalPages }) => (
     <footer className="bg-[#031634] text-white py-2.5 px-[18mm] mt-auto flex justify-between items-center text-[0.65rem] border-t-2 border-[#4CAF50] shrink-0">
       <span className="opacity-90">
-        © {new Date().getFullYear()} Solar Vistar. All Rights Reserved.
+        © {new Date().getFullYear()} Solar Power Vistar Co-operative Society. All Rights Reserved.
       </span>
       <span className="font-bold text-[#ffddb4] bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10">
         Page {pageNum} of {totalPages}
@@ -234,7 +234,7 @@ const QuotationPDFTemplate = ({ quote = {} }) => {
               </h4>
               <div className="space-y-3.5 text-gray-700 text-sm leading-relaxed">
                 <p>
-                  A warm welcome to the Solar Vistar family. We are delighted
+                  A warm welcome to the Solar Power Vistar Co-operative Society family. We are delighted
                   that you are transition-planning to clean, modern, and
                   autonomous solar energy configurations for your home. This
                   tactical implementation actively limits reliance on escalating
@@ -899,7 +899,7 @@ const QuotationPDFTemplate = ({ quote = {} }) => {
                   <div className="space-y-2">
                     <div className="flex justify-between border-b border-gray-200 pb-1">
                       <span className="text-gray-500">Account Name:</span>
-                      <span className="font-bold text-[#031634]">SOLAR VISTAR</span>
+                      <span className="font-bold text-[#031634]">SOLAR POWER VISTAR CO-OPERATIVE SOCIETY</span>
                     </div>
                     <div className="flex justify-between border-b border-gray-200 pb-1">
                       <span className="text-gray-500">Account No.:</span>

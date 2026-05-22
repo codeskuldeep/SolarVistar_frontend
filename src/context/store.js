@@ -11,6 +11,7 @@ import "./api/quotationsApi";
 import "./api/usersApi";
 import "./api/dashboardApi";
 import "./api/projectsApi";
+import "./api/maintenanceApi";
 
 const appReducer = combineReducers({
   auth: authReducer,

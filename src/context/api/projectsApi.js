@@ -197,6 +197,20 @@ export const projectsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // POST /projects/:projectId/amc
+    createAmcRecord: builder.mutation({
+      query: ({ projectId, data }) => ({
+        url: `/projects/${projectId}/amc`,
+        method: "POST",
+        body: data,
+      }),
+      transformResponse: (response) => response.data.amc,
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "Project", id: projectId },
+        { type: "Amc", id: "LIST" },
+      ],
+    }),
+
     // PATCH /projects/:projectId/amc
     updateAmcRecord: builder.mutation({
       query: ({ projectId, data }) => ({
@@ -207,7 +221,20 @@ export const projectsApi = baseApi.injectEndpoints({
       transformResponse: (response) => response.data.amc,
       invalidatesTags: (_result, _error, { projectId }) => [
         { type: "Project", id: projectId },
-        { type: "Amc", id: `PROJECT_${projectId}` }
+        { type: "Amc", id: `PROJECT_${projectId}` },
+        { type: "Amc", id: "LIST" },
+      ],
+    }),
+
+    // DELETE /projects/:projectId/amc
+    deleteAmcRecord: builder.mutation({
+      query: ({ projectId }) => ({
+        url: `/projects/${projectId}/amc`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "Project", id: projectId },
+        { type: "Amc", id: "LIST" },
       ],
     }),
 
@@ -262,7 +289,9 @@ export const {
   useUnlinkProjectTaskDocumentMutation,
   useUpdateProjectStageMutation,
   useUpsertSubsidyMutation,
+  useCreateAmcRecordMutation,
   useUpdateAmcRecordMutation,
+  useDeleteAmcRecordMutation,
   useGetDocumentMatrixQuery,
   useVerifyDocumentMutation,
   useGetProjectActivityQuery,
