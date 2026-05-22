@@ -16,6 +16,7 @@ import {
   SolarPanelIcon,
   MoneyIcon,
   BellIcon,
+  WrenchIcon,
 } from "@phosphor-icons/react";
 import { useGetAdminAlertsQuery } from "../../context/api/dashboardApi";
 import { IndianRupeeIcon } from "lucide-react";
@@ -91,6 +92,12 @@ const DashboardLayout = () => {
       name: "Customers",
       href: "/customers",
       icon: UsersIcon,
+      roles: ["ADMIN", "STAFF"],
+    },
+    {
+      name: "Maintenance",
+      href: "/maintenance",
+      icon: WrenchIcon,
       roles: ["ADMIN", "STAFF"],
     },
     {

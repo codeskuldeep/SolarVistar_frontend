@@ -20,6 +20,7 @@ import ProjectsInOps from "../pages/Admin/ProjectsInOps";
 import InstallationPending from "../pages/Admin/InstallationPending";
 import SubsidyPending from "../pages/Admin/SubsidyPending";
 import CompletedProjects from "../pages/Admin/CompletedProjects";
+import Maintenance from "../pages/Maintenance";
 
 export const router = createBrowserRouter([
   {
@@ -109,6 +110,10 @@ export const router = createBrowserRouter([
           {
             path: "admin/completed-projects",
             element: <CompletedProjects />,
+          },
+          {
+            path: "maintenance",
+            element: <Maintenance />,
           },
         ],
       },
