@@ -23,7 +23,8 @@ import {
   ArrowLeft,
   CaretRight,
   FloppyDisk,
-  Coins
+  Coins,
+  X,
 } from "@phosphor-icons/react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -798,6 +799,7 @@ const ProjectActivityLog = ({ projectId }) => {
 const WarrantyProgressBar = ({ amcRecord, projectId, dispatch }) => {
   const [showForm, setShowForm] = useState(false);
   const [staffSearch, setStaffSearch] = useState("");
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const buildForm = (r) => ({
     startDate: r?.startDate ? r.startDate.slice(0, 10) : "",
@@ -987,63 +989,219 @@ const WarrantyProgressBar = ({ amcRecord, projectId, dispatch }) => {
     ? `${remainingYears} Yr ${remainingMonths > 0 ? remainingMonths + " Mo" : ""} Remaining`
     : `${remainingMonths} Months Remaining`;
 
+  // ── 3-month segments ─────────────────────────────────────────────────────────
+  const segments = [];
+  {
+    let cur = new Date(start);
+    let idx = 0;
+    while (cur < end) {
+      const segStart = new Date(cur);
+      const next = new Date(cur);
+      next.setMonth(next.getMonth() + 3);
+      const segEnd = next > end ? new Date(end) : next;
+      const segElapsed = Math.max(0, Math.min((now - segStart) / (segEnd - segStart), 1));
+      const status = now >= segEnd ? "past" : now >= segStart ? "current" : "upcoming";
+      segments.push({ idx, segStart, segEnd, status, segElapsed });
+      cur = next;
+      idx++;
+    }
+  }
+
+  // checkpoint tick positions (boundaries between segments, excluding 0% and 100%)
+  const ticks = segments.slice(0, -1).map((seg, i) => ({
+    pct: ((seg.segEnd - start) / (end - start)) * 100,
+    label: `${(i + 1) * 3}M`,
+  }));
+
+  const fmtDate = (d) => d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
   return (
-    <section className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm relative overflow-hidden mb-10">
-      <div className={`absolute top-0 right-0 w-64 h-64 -mr-32 -mt-32 rounded-full blur-3xl opacity-20 pointer-events-none ${isExpired ? "bg-red-500" : isWarning ? "bg-amber-400" : "bg-emerald-500"}`} />
+    <>
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm relative overflow-hidden mb-10">
+        <div className={`absolute top-0 right-0 w-64 h-64 -mr-32 -mt-32 rounded-full blur-3xl opacity-20 pointer-events-none ${isExpired ? "bg-red-500" : isWarning ? "bg-amber-400" : "bg-emerald-500"}`} />
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4 relative z-10">
-        <div>
-          <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2 mb-1">
-            <Seal className={isExpired ? "text-red-500" : "text-emerald-500"} weight="fill" size={24} />
-            System Warranty / AMC
-          </h3>
-          {amcRecord.supportContact && (
-            <p className="text-xs text-gray-500 dark:text-slate-400">Support: {amcRecord.supportContact.name}</p>
-          )}
-          {amcRecord.notes && (
-            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 max-w-sm">{amcRecord.notes}</p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <div className={`px-3 py-1 rounded-full text-xs font-bold ring-1 ring-inset whitespace-nowrap ${
-            isExpired
-              ? "bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800"
-              : "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-800"
-          }`}>
-            {amcRecord.status} • {remainingText}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4 relative z-10">
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2 mb-1">
+              <Seal className={isExpired ? "text-red-500" : "text-emerald-500"} weight="fill" size={24} />
+              System Warranty / AMC
+            </h3>
+            {amcRecord.supportContact && (
+              <p className="text-xs text-gray-500 dark:text-slate-400">Support: {amcRecord.supportContact.name}</p>
+            )}
+            {amcRecord.notes && (
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 max-w-sm">{amcRecord.notes}</p>
+            )}
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            title="Edit AMC"
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 transition"
-          >
-            <FloppyDisk size={16} />
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            title="Delete AMC"
-            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition disabled:opacity-40"
-          >
-            <Trash size={16} />
-          </button>
-        </div>
-      </div>
 
-      <div className="relative z-10">
-        <div className="h-4 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner dark:bg-slate-800">
-          <div className={`relative h-full transition-all duration-1000 ease-out ${barColor}`} style={{ width: `${percentage}%` }}>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent bg-[length:200%_100%]" style={{ animation: "shimmer 2s infinite linear" }} />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className={`px-3 py-1 rounded-full text-xs font-bold ring-1 ring-inset whitespace-nowrap ${
+              isExpired
+                ? "bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800"
+                : "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-800"
+            }`}>
+              {amcRecord.status} • {remainingText}
+            </div>
+            <button
+              onClick={() => setShowForm(true)}
+              title="Edit AMC"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 transition"
+            >
+              <FloppyDisk size={16} />
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Delete AMC"
+              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition disabled:opacity-40"
+            >
+              <Trash size={16} />
+            </button>
           </div>
         </div>
-        <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 font-semibold uppercase tracking-wider mt-2 px-1">
-          <span>Started: {start.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
-          <span>Ends: {end.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
-        </div>
-      </div>
 
-      <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
-    </section>
+        {/* Progress bar — clickable, shows 3-month tick marks */}
+        <div
+          className="relative z-10 cursor-pointer group"
+          title="Click to view 3-month breakdown"
+          onClick={() => setShowBreakdown(true)}
+        >
+          {/* Bar */}
+          <div className="relative h-4 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner dark:bg-slate-800">
+            <div className={`relative h-full transition-all duration-1000 ease-out ${barColor}`} style={{ width: `${percentage}%` }}>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent bg-[length:200%_100%]" style={{ animation: "shimmer 2s infinite linear" }} />
+            </div>
+            {/* Tick marks */}
+            {ticks.map((tick) => (
+              <div
+                key={tick.label}
+                className="absolute top-0 bottom-0 w-0.5 bg-white/70 dark:bg-white/50 z-10"
+                style={{ left: `${tick.pct}%` }}
+              />
+            ))}
+          </div>
+
+          {/* Tick labels below the bar */}
+          {ticks.length > 0 && (
+            <div className="relative h-4 mt-0.5">
+              {ticks.map((tick) => (
+                <span
+                  key={tick.label}
+                  className="absolute -translate-x-1/2 text-[10px] font-semibold text-gray-400 dark:text-slate-500"
+                  style={{ left: `${tick.pct}%` }}
+                >
+                  {tick.label}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Date labels */}
+          <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 font-semibold uppercase tracking-wider mt-1 px-1">
+            <span>Started: {fmtDate(start)}</span>
+            <span className="text-[10px] text-gray-400 dark:text-slate-500 self-center group-hover:text-green-500 transition-colors">
+              Click for breakdown ›
+            </span>
+            <span>Ends: {fmtDate(end)}</span>
+          </div>
+        </div>
+
+        <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+      </section>
+
+      {/* ── Breakdown Sidebar ──────────────────────────────────────────────────── */}
+      {showBreakdown && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="flex-1 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowBreakdown(false)}
+          />
+          {/* Panel */}
+          <div className="w-80 sm:w-96 h-full bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-slate-700 shrink-0">
+              <div>
+                <h2 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                  <Seal size={18} className={isExpired ? "text-red-500" : "text-emerald-500"} weight="fill" />
+                  AMC Breakdown
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  {fmtDate(start)} — {fmtDate(end)}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowBreakdown(false)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Overall badge */}
+            <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 shrink-0">
+              <div className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ring-1 ring-inset ${
+                isExpired
+                  ? "bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/20 dark:text-red-400 dark:ring-red-800"
+                  : "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-800"
+              }`}>
+                {amcRecord.status} • {remainingText}
+              </div>
+            </div>
+
+            {/* Segment list */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {segments.map((seg, i) => {
+                const chipCfg = {
+                  past:     "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400",
+                  current:  "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                  upcoming: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
+                };
+                const chipLabel = { past: "Completed", current: "In Progress", upcoming: "Upcoming" };
+                return (
+                  <div
+                    key={i}
+                    className={`rounded-xl border p-4 space-y-2 transition-colors ${
+                      seg.status === "current"
+                        ? "border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10"
+                        : seg.status === "past"
+                        ? "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50"
+                        : "border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-900/5"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-800 dark:text-white">
+                        Q{i + 1} — Months {i * 3 + 1}–{Math.min((i + 1) * 3, Math.round(totalDays / 30))}
+                      </span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${chipCfg[seg.status]}`}>
+                        {chipLabel[seg.status]}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      {fmtDate(seg.segStart)} — {fmtDate(seg.segEnd)}
+                    </p>
+                    {seg.status === "current" && (
+                      <div className="space-y-1">
+                        <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-amber-400 transition-all duration-700"
+                            style={{ width: `${seg.segElapsed * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                          {Math.round(seg.segElapsed * 100)}% of this quarter elapsed
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`.animate-slide-in-right { animation: slideInRight 0.25s ease-out; } @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
+    </>
   );
 };

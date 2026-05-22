@@ -8,6 +8,8 @@ import {
   ArrowSquareOutIcon,
   ArrowsClockwiseIcon,
   SealIcon,
+  XIcon,
+  CalendarBlankIcon,
 } from "@phosphor-icons/react";
 import { TableSkeleton } from "../../components/ui/Skeletons";
 import Pagination from "../../components/ui/Pagination";
@@ -37,15 +39,28 @@ export default function Maintenance() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const [debouncedSearch] = useDebounce(search, 300);
+
+  const lastDayOfMonth = (ym) => {
+    if (!ym) return "";
+    const [y, m] = ym.split("-").map(Number);
+    return new Date(y, m, 0).toISOString().slice(0, 10);
+  };
 
   const { data, isLoading, isFetching } = useGetAllAmcRecordsQuery({
     page,
     limit: PER_PAGE,
     search: debouncedSearch,
     status: statusFilter,
+    startDateFrom: dateFrom ? `${dateFrom}-01` : "",
+    startDateTo: dateTo ? lastDayOfMonth(dateTo) : "",
   });
+
+  const hasDateFilter = dateFrom || dateTo;
+  const clearDates = () => { setDateFrom(""); setDateTo(""); setPage(1); };
 
   const records = data?.amcRecords ?? [];
   const meta = data?.meta;
@@ -64,29 +79,67 @@ export default function Maintenance() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <MagnifyingGlassIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Search by customer name…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <MagnifyingGlassIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Search by customer name…"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
+          <select
+            className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">All Statuses</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="EXPIRED">EXPIRED</option>
+            <option value="RENEWED">RENEWED</option>
+          </select>
+          {isFetching && !isLoading && (
+            <ArrowsClockwiseIcon size={18} className="self-center text-green-600 animate-spin" />
+          )}
         </div>
-        <select
-          className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-        >
-          <option value="">All Statuses</option>
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="EXPIRED">EXPIRED</option>
-          <option value="RENEWED">RENEWED</option>
-        </select>
-        {isFetching && !isLoading && (
-          <ArrowsClockwiseIcon size={18} className="self-center text-green-600 animate-spin" />
-        )}
+
+        {/* Date range filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <CalendarBlankIcon size={15} />
+            <span className="font-medium whitespace-nowrap">Start Date Range:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">From</label>
+            <input
+              type="month"
+              className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">To</label>
+            <input
+              type="month"
+              className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            />
+          </div>
+          {hasDateFilter && (
+            <button
+              onClick={clearDates}
+              className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 hover:underline font-medium"
+            >
+              <XIcon size={12} /> Clear dates
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -177,11 +230,9 @@ export default function Maintenance() {
 
       {meta && meta.totalPages > 1 && (
         <Pagination
-          currentPage={page}
-          totalPages={meta.totalPages}
+          meta={meta}
           onPageChange={setPage}
-          totalItems={meta.totalItems}
-          itemsPerPage={PER_PAGE}
+          isLoading={isFetching}
         />
       )}
     </div>
