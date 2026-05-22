@@ -16,6 +16,7 @@ import {
   Printer,
   UploadCloud,
   X,
+  MapPin,
 } from "lucide-react";
 import { LockSimple } from "@phosphor-icons/react";
 import { useUploadDocumentMutation } from "../../context/api/documents";
@@ -321,9 +322,11 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
   const [formData, setFormData] = useState({
     leadId: initialLeadId || "",
     panelType: "", panelName: "", panelSizeWatt: "", numberOfPanels: "",
-    inverterWarrantyYears: "", numberOfInverters: "", inverterPhotoUrl: "", panelPhotoUrl: "",
+    inverterWarrantyYears: "10", numberOfInverters: "", inverterPhotoUrl: "", panelPhotoUrl: "",
+    freeMaintenanceYears: "5",
     acWire: "", dcWire: "", acdbCompany: "", dcdbCompany: "", dcCableSqMm: "", acCableSqMm: "",
     quotationValue: "", subsidy: "78000", dcrStatus: "DCR",
+    city: "", roofType: "", availableAreaSqFt: "", shadingAnalysis: "", siteSurveyPhotoUrl: "",
   });
 
   useEffect(() => {
@@ -351,7 +354,8 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
       "panelWarrantyYears", "loadKw", "structure", "inverterSizeKw",
       "inverterWarrantyYears", "numberOfInverters", "inverterPhotoUrl", "panelPhotoUrl", "acWire", "dcWire", "acdbCompany",
       "dcdbCompany", "dcCableSqMm", "acCableSqMm", "quotationValue",
-      "subsidy", "dcrStatus",
+      "subsidy", "dcrStatus", "freeMaintenanceYears",
+      "city", "roofType", "availableAreaSqFt", "shadingAnalysis", "siteSurveyPhotoUrl",
     ];
 
     const submissionData = editableFields.reduce((acc, key) => {
@@ -369,12 +373,14 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
     if (submissionData.panelWarrantyYears)  submissionData.panelWarrantyYears  = parseInt(submissionData.panelWarrantyYears, 10);
     if (submissionData.inverterWarrantyYears) submissionData.inverterWarrantyYears = parseInt(submissionData.inverterWarrantyYears, 10);
     if (submissionData.numberOfInverters)   submissionData.numberOfInverters   = parseInt(submissionData.numberOfInverters, 10);
+    if (submissionData.freeMaintenanceYears) submissionData.freeMaintenanceYears = parseInt(submissionData.freeMaintenanceYears, 10);
     if (submissionData.loadKw)              submissionData.loadKw              = parseFloat(submissionData.loadKw);
     if (submissionData.inverterSizeKw)      submissionData.inverterSizeKw      = parseFloat(submissionData.inverterSizeKw);
     if (submissionData.dcCableSqMm)         submissionData.dcCableSqMm         = parseFloat(submissionData.dcCableSqMm);
     if (submissionData.acCableSqMm)         submissionData.acCableSqMm         = parseFloat(submissionData.acCableSqMm);
     if (submissionData.quotationValue)      submissionData.quotationValue      = parseFloat(submissionData.quotationValue);
     if (submissionData.subsidy)             submissionData.subsidy             = parseFloat(submissionData.subsidy);
+    if (submissionData.availableAreaSqFt)   submissionData.availableAreaSqFt   = parseFloat(submissionData.availableAreaSqFt);
 
     if (isSubsidyLocked) {
       delete submissionData.subsidy;
@@ -434,6 +440,11 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
               <p className="text-sm text-gray-500 dark:text-slate-400">
                 Attached to Lead: <span className="font-semibold text-gray-900 dark:text-white">{initialData.lead?.customerName}</span>
               </p>
+              {initialData.lead?.phoneNumber && (
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                  Phone: <span className="font-semibold text-gray-900 dark:text-white">{initialData.lead.phoneNumber}</span>
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -446,11 +457,24 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormSelect label="Panel Type" name="panelType" value={formData.panelType || ""} onChange={handleChange} options={["TOPCON", "MONOFACIAL"]} />
             <FormInput label="Panel Name (Brand)" name="panelName" value={formData.panelName || ""} onChange={handleChange} placeholder="e.g., Waaree" />
-            <FormSelect label="Panel Size (Watt)" name="panelSizeWatt" value={formData.panelSizeWatt || ""} onChange={handleChange} options={["550 - 575", "535 - 550"]} />
+            <FormSelect label="Panel Size (Watt)" name="panelSizeWatt" value={formData.panelSizeWatt || ""} onChange={handleChange} options={["610 - 630", "550 - 575", "535 - 550"]} />
             <FormInput label="Number of Panels" name="numberOfPanels" type="number" value={formData.numberOfPanels || ""} onChange={handleChange} placeholder="0" />
             <FormInput label="Warranty (Years)" name="panelWarrantyYears" type="number" value={formData.panelWarrantyYears || ""} onChange={handleChange} placeholder="25" />
-            <InlinePhotoUpload label="Panel Photo" value={formData.panelPhotoUrl} onChange={(val) => setFormData(p => ({...p, panelPhotoUrl: val}))} leadId={formData.leadId} category="PANEL_PHOTO" />
             <FormInput label="Total Load (kW)" name="loadKw" type="number" step="0.1" value={formData.loadKw || ""} onChange={handleChange} placeholder="5.0" />
+          </div>
+        </section>
+
+        <section>
+          <div className="flex items-center mb-5 border-b border-gray-100 dark:border-slate-800 pb-2">
+            <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-500 mr-2" />
+            <h3 className="text-md font-medium text-gray-800 dark:text-slate-200">Site Assessment</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormInput label="Installation City" name="city" value={formData.city || ""} onChange={handleChange} placeholder="e.g., Bhopal, MP" />
+            <FormInput label="Roof Type" name="roofType" value={formData.roofType || ""} onChange={handleChange} placeholder="e.g., Concrete Flat Roof" />
+            <FormInput label="Available Area (Sq. Ft.)" name="availableAreaSqFt" type="number" step="1" value={formData.availableAreaSqFt || ""} onChange={handleChange} placeholder="e.g., 450" />
+            <FormInput label="Shading Analysis" name="shadingAnalysis" value={formData.shadingAnalysis || ""} onChange={handleChange} placeholder="e.g., Unobstructed (True South)" className="md:col-span-2" />
+            <InlinePhotoUpload label="3D Site Survey Photo" value={formData.siteSurveyPhotoUrl || ""} onChange={(url) => setFormData(p => ({ ...p, siteSurveyPhotoUrl: url }))} leadId={formData.leadId} category="SITE_SURVEY" />
           </div>
         </section>
 
@@ -462,9 +486,9 @@ const QuotationForm = ({ onCancel, onSuccess, initialData = null, isEdit = false
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <FormInput label="Structure Type" name="structure" value={formData.structure || ""} onChange={handleChange} placeholder="e.g., GI Elevated" className="md:col-span-2" />
             <FormInput label="Inverter Size (kW)" name="inverterSizeKw" type="number" step="0.1" value={formData.inverterSizeKw || ""} onChange={handleChange} placeholder="5.0" />
-            <FormInput label="Inverter Warranty" name="inverterWarrantyYears" type="number" value={formData.inverterWarrantyYears || ""} onChange={handleChange} placeholder="10" />
+            <FormInput label="Inverter Warranty (Years)" name="inverterWarrantyYears" type="number" value={formData.inverterWarrantyYears || ""} onChange={handleChange} placeholder="10" />
+            <FormInput label="Free Maintenance (Years)" name="freeMaintenanceYears" type="number" value={formData.freeMaintenanceYears || ""} onChange={handleChange} placeholder="5" />
             <FormInput label="Number of Inverters" name="numberOfInverters" type="number" value={formData.numberOfInverters || ""} onChange={handleChange} placeholder="1" />
-            <InlinePhotoUpload label="Inverter Photo" value={formData.inverterPhotoUrl} onChange={(val) => setFormData(p => ({...p, inverterPhotoUrl: val}))} leadId={formData.leadId} category="INVERTER_PHOTO" />
             <FormSelect label="AC Wire Brand" name="acWire" value={formData.acWire || ""} onChange={handleChange} options={componentBrands} />
             <FormSelect label="DC Wire Brand" name="dcWire" value={formData.dcWire || ""} onChange={handleChange} options={componentBrands} />
             <FormSelect label="ACDB Company" name="acdbCompany" value={formData.acdbCompany || ""} onChange={handleChange} options={componentBrands} />
@@ -548,7 +572,7 @@ const QuotationViewer = ({ quoteId, onBack }) => {
   const { data } = useGetQuotationsQuery({ limit: 100 }); // fetch all for viewer lookup
   const quote = data?.quotations?.find((q) => q.id === quoteId);
 
-  if (!quote) return <div className="text-center py-10">Quotation not found.</div>;
+  if (!quote) return <div className="text-center py-10">Loading...</div>;
 
   return (
     <div className="w-full">

@@ -101,7 +101,7 @@ const PasswordStrength = ({ password }) => {
 };
 
 // ── Main Component ───────────────────────────────────────────────────────────
-const EMPTY_FORM = { name: "", email: "", password: "", confirmPassword: "", role: "STAFF", department: "" };
+const EMPTY_FORM = { name: "", email: "", phoneNumber: "", password: "", confirmPassword: "", role: "STAFF", department: "" };
 
 const Users = () => {
   const dispatch = useDispatch();
@@ -237,6 +237,7 @@ const Users = () => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -245,7 +246,7 @@ const Users = () => {
                 <TableSkeleton columns={4} />
               ) : usersList.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                  <td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                     No users found. Click "Add User" to create one.
                   </td>
                 </tr>
@@ -268,6 +269,9 @@ const Users = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       {user.department || <span className="text-gray-400 italic text-xs">—</span>}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      {user.phoneNumber || <span className="text-gray-400 italic text-xs">—</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -336,6 +340,21 @@ const Users = () => {
                   className={inputCls(!!fieldError("email"))}
                 />
                 <FieldError msg={fieldError("email")} />
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g. 9876543210"
+                  className={inputCls(false)}
+                />
               </div>
 
               {/* Password */}
