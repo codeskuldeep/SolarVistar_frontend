@@ -4,15 +4,15 @@ export const maintenanceApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // GET /amc — global list of all AMC records for the /maintenance page
     getAllAmcRecords: builder.query({
-      query: ({ page = 1, limit = 10, search = "", status = "", startDateFrom = "", startDateTo = "" } = {}) => ({
+      query: ({ page = 1, limit = 10, search = "", status = "", year = "", quarter = "", month = "" } = {}) => ({
         url: "/amc",
         params: {
           page,
           limit,
-          ...(search        ? { search }        : {}),
-          ...(status        ? { status }        : {}),
-          ...(startDateFrom ? { startDateFrom } : {}),
-          ...(startDateTo   ? { startDateTo }   : {}),
+          ...(search         ? { search }         : {}),
+          ...(status         ? { status }         : {}),
+          ...(year && quarter ? { year, quarter } : {}),
+          ...(year && month  ? { year, month }   : {}),
         },
       }),
       transformResponse: (response) => ({

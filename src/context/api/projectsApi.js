@@ -238,6 +238,19 @@ export const projectsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // PUT /projects/:projectId/amc/checkpoints/:quarterIndex
+    upsertAmcCheckpoint: builder.mutation({
+      query: ({ projectId, quarterIndex, data }) => ({
+        url: `/projects/${projectId}/amc/checkpoints/${quarterIndex}`,
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "Project", id: projectId },
+        { type: "Amc", id: `PROJECT_${projectId}` },
+      ],
+    }),
+
     // Phase 8: Document Matrix & Activity
     getDocumentMatrix: builder.query({
       query: (projectId) => `/projects/${projectId}/document-matrix`,
@@ -292,6 +305,7 @@ export const {
   useCreateAmcRecordMutation,
   useUpdateAmcRecordMutation,
   useDeleteAmcRecordMutation,
+  useUpsertAmcCheckpointMutation,
   useGetDocumentMatrixQuery,
   useVerifyDocumentMutation,
   useGetProjectActivityQuery,

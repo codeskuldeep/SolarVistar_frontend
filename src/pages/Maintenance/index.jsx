@@ -21,6 +21,52 @@ const fmt = (dateStr) =>
     ? new Date(dateStr).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
     : "—";
 
+function addMonths(date, n) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
+function getNextCheckpoint(amc) {
+  const end = new Date(amc.endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let cp = new Date(amc.startDate);
+  let idx = 0;
+  while (cp < today) { cp = addMonths(cp, 3); idx++; }
+  if (cp > end) return null;
+  return { date: cp, quarterIndex: idx, saved: amc.checkpoints?.find((c) => c.quarterIndex === idx) ?? null };
+}
+
+function getMonthCheckpoint(amc, year, month) {
+  const monthStart = new Date(Number(year), Number(month) - 1, 1);
+  const monthEnd   = new Date(Number(year), Number(month), 0);
+  const end = new Date(amc.endDate);
+  let cp = new Date(amc.startDate);
+  let idx = 0;
+  while (cp < monthStart) { cp = addMonths(cp, 3); idx++; }
+  if (cp > monthEnd || cp > end) return null;
+  return { date: cp, quarterIndex: idx, saved: amc.checkpoints?.find((c) => c.quarterIndex === idx) ?? null };
+}
+
+function getQuarterCheckpoint(amc, year, quarter) {
+  const quarterStart = new Date(Number(year), (Number(quarter) - 1) * 3, 1);
+  const quarterEnd   = new Date(Number(year), (Number(quarter) - 1) * 3 + 3, 0);
+  const end = new Date(amc.endDate);
+  let cp = new Date(amc.startDate);
+  let idx = 0;
+  while (cp < quarterStart) { cp = addMonths(cp, 3); idx++; }
+  if (cp > quarterEnd || cp > end) return null;
+  return { date: cp, quarterIndex: idx, saved: amc.checkpoints?.find((c) => c.quarterIndex === idx) ?? null };
+}
+
+const CP_STATUS_CFG = {
+  PENDING:     "bg-gray-100 text-gray-600 dark:bg-gray-800/60 dark:text-gray-400",
+  IN_PROGRESS: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  COMPLETED:   "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  DELAYED:     "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+};
+
 const StatusBadge = ({ status }) => {
   const cfg = {
     ACTIVE:   "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -34,36 +80,83 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+function CheckpointCell({ amc, yearFilter, quarterFilter, monthFilter }) {
+  const cpInfo = monthFilter
+    ? getMonthCheckpoint(amc, yearFilter, monthFilter)
+    : quarterFilter
+    ? getQuarterCheckpoint(amc, yearFilter, quarterFilter)
+    : getNextCheckpoint(amc);
+
+  if (!cpInfo) return <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>;
+
+  const status = cpInfo.saved?.status ?? "PENDING";
+  return (
+    <div className="space-y-0.5 min-w-27.5">
+      <p className="text-xs text-gray-700 dark:text-gray-200 whitespace-nowrap">{fmt(cpInfo.date)}</p>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none ${CP_STATUS_CFG[status]}`}>
+          {status.replace("_", " ")}
+        </span>
+        {cpInfo.saved?.assignedTo && (
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-22.5">
+            {cpInfo.saved.assignedTo.name}
+          </span>
+        )}
+      </div>
+      {cpInfo.saved?.comment && (
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-37.5">{cpInfo.saved.comment}</p>
+      )}
+    </div>
+  );
+}
+
 export default function Maintenance() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
+  const [quarterFilter, setQuarterFilter] = useState(null); // 1-4 or null
+  const [monthFilter, setMonthFilter] = useState(null);     // 1-12 or null
 
   const [debouncedSearch] = useDebounce(search, 300);
 
-  const lastDayOfMonth = (ym) => {
-    if (!ym) return "";
-    const [y, m] = ym.split("-").map(Number);
-    return new Date(y, m, 0).toISOString().slice(0, 10);
-  };
+  const QUARTER_LABELS = [
+    { q: 1, label: "Q1", months: "Jan – Mar" },
+    { q: 2, label: "Q2", months: "Apr – Jun" },
+    { q: 3, label: "Q3", months: "Jul – Sep" },
+    { q: 4, label: "Q4", months: "Oct – Dec" },
+  ];
+
+  const MONTH_LABELS = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December",
+  ];
+  const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   const { data, isLoading, isFetching } = useGetAllAmcRecordsQuery({
     page,
     limit: PER_PAGE,
     search: debouncedSearch,
     status: statusFilter,
-    startDateFrom: dateFrom ? `${dateFrom}-01` : "",
-    startDateTo: dateTo ? lastDayOfMonth(dateTo) : "",
+    year: (quarterFilter || monthFilter) ? String(yearFilter) : "",
+    quarter: quarterFilter ? String(quarterFilter) : "",
+    month: monthFilter ? String(monthFilter) : "",
   });
-
-  const hasDateFilter = dateFrom || dateTo;
-  const clearDates = () => { setDateFrom(""); setDateTo(""); setPage(1); };
 
   const records = data?.amcRecords ?? [];
   const meta = data?.meta;
+
+  const checkpointColHeader = monthFilter
+    ? `${MONTH_SHORT[monthFilter - 1]} Checkpoint`
+    : quarterFilter
+    ? `Q${quarterFilter} Checkpoint`
+    : "Next Checkpoint";
+  const tableHeaders = [
+    "Customer", "Phone", "Start Date", "End Date", "Status",
+    checkpointColHeader,
+    "Support Contact", "Notes", "Project",
+  ];
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -105,38 +198,73 @@ export default function Maintenance() {
           )}
         </div>
 
-        {/* Date range filters */}
+        {/* Quarter / Month filter */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <CalendarBlankIcon size={15} />
-            <span className="font-medium whitespace-nowrap">Start Date Range:</span>
+            <span className="font-medium whitespace-nowrap">Filter by:</span>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">From</label>
-            <input
-              type="month"
-              className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
-              value={dateFrom}
-              max={dateTo || undefined}
-              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-            />
+
+          {/* Year selector */}
+          <select
+            className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={yearFilter}
+            onChange={(e) => { setYearFilter(Number(e.target.value)); setPage(1); }}
+          >
+            {[-2, -1, 0, 1, 2].map((offset) => {
+              const y = new Date().getFullYear() + offset;
+              return <option key={y} value={y}>{y}</option>;
+            })}
+          </select>
+
+          {/* Q1–Q4 toggle buttons */}
+          <div className="flex gap-1.5">
+            {QUARTER_LABELS.map(({ q, label, months }) => (
+              <button
+                key={q}
+                title={months}
+                onClick={() => {
+                  setMonthFilter(null);
+                  setQuarterFilter(quarterFilter === q ? null : q);
+                  setPage(1);
+                }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                  quarterFilter === q
+                    ? "bg-green-600 text-white border-green-600 dark:bg-green-500 dark:border-green-500"
+                    : "bg-white dark:bg-dark-bg text-gray-600 dark:text-gray-300 border-gray-300 dark:border-dark-border hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
+                }`}
+              >
+                {label}
+                <span className="hidden sm:inline text-[10px] font-normal ml-1 opacity-70">{months}</span>
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">To</label>
-            <input
-              type="month"
-              className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
-              value={dateTo}
-              min={dateFrom || undefined}
-              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-            />
-          </div>
-          {hasDateFilter && (
+
+          <span className="text-xs text-gray-400 dark:text-gray-600 hidden sm:inline">or</span>
+
+          {/* Month dropdown */}
+          <select
+            className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={monthFilter ?? ""}
+            onChange={(e) => {
+              const val = e.target.value ? Number(e.target.value) : null;
+              setQuarterFilter(null);
+              setMonthFilter(val);
+              setPage(1);
+            }}
+          >
+            <option value="">Month</option>
+            {MONTH_LABELS.map((label, i) => (
+              <option key={i + 1} value={i + 1}>{label}</option>
+            ))}
+          </select>
+
+          {(quarterFilter || monthFilter) && (
             <button
-              onClick={clearDates}
+              onClick={() => { setQuarterFilter(null); setMonthFilter(null); setPage(1); }}
               className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 hover:underline font-medium"
             >
-              <XIcon size={12} /> Clear dates
+              <XIcon size={12} /> Clear
             </button>
           )}
         </div>
@@ -159,7 +287,7 @@ export default function Maintenance() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-dark-border text-left">
                   <tr>
-                    {["Customer", "Phone", "Start Date", "End Date", "Status", "Support Contact", "Notes", "Project"].map((h) => (
+                    {tableHeaders.map((h) => (
                       <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">
                         {h}
                       </th>
@@ -178,8 +306,11 @@ export default function Maintenance() {
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{fmt(amc.startDate)}</td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{fmt(amc.endDate)}</td>
                       <td className="px-4 py-3"><StatusBadge status={amc.status} /></td>
+                      <td className="px-4 py-3">
+                        <CheckpointCell amc={amc} yearFilter={yearFilter} quarterFilter={quarterFilter} monthFilter={monthFilter} />
+                      </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{amc.supportContact?.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[180px] truncate">{amc.notes ?? "—"}</td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-45 truncate">{amc.notes ?? "—"}</td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => navigate(`/projects/${amc.projectId}`)}
@@ -211,6 +342,12 @@ export default function Maintenance() {
                     <span>Start: {fmt(amc.startDate)}</span>
                     <span>End: {fmt(amc.endDate)}</span>
                     <span>Contact: {amc.supportContact?.name ?? "—"}</span>
+                  </div>
+                  <div className="pt-0.5">
+                    <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+                      {monthFilter ? `${MONTH_SHORT[monthFilter - 1]} Checkpoint` : quarterFilter ? `Q${quarterFilter} Checkpoint` : "Next Checkpoint"}
+                    </p>
+                    <CheckpointCell amc={amc} yearFilter={yearFilter} quarterFilter={quarterFilter} monthFilter={monthFilter} />
                   </div>
                   {amc.notes && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{amc.notes}</p>

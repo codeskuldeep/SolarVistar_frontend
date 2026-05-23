@@ -9,6 +9,7 @@ import {
   useCreateAmcRecordMutation,
   useUpdateAmcRecordMutation,
   useDeleteAmcRecordMutation,
+  useUpsertAmcCheckpointMutation,
   useGetDocumentMatrixQuery,
   useVerifyDocumentMutation,
   useGetProjectActivityQuery,
@@ -25,6 +26,7 @@ import {
   FloppyDisk,
   Coins,
   X,
+  PencilSimple,
 } from "@phosphor-icons/react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -823,6 +825,51 @@ const WarrantyProgressBar = ({ amcRecord, projectId, dispatch }) => {
   const [createAmc, { isLoading: creating }] = useCreateAmcRecordMutation();
   const [updateAmc, { isLoading: updating }] = useUpdateAmcRecordMutation();
   const [deleteAmc, { isLoading: deleting }] = useDeleteAmcRecordMutation();
+  const [upsertCheckpoint, { isLoading: savingCp }] = useUpsertAmcCheckpointMutation();
+
+  // Checkpoint edit state
+  const [editingQ, setEditingQ] = useState(null);
+  const [cpForm, setCpForm] = useState({ status: "PENDING", assignedToId: "", comment: "" });
+  const [cpStaffSearch, setCpStaffSearch] = useState("");
+
+  const { data: cpUsersData } = useGetUsersQuery(
+    { page: 1, limit: 20, search: cpStaffSearch },
+    { skip: editingQ === null || !cpStaffSearch }
+  );
+
+  const savedCp = (qIdx) => amcRecord?.checkpoints?.find((c) => c.quarterIndex === qIdx);
+
+  const openCpEdit = (qIdx) => {
+    const cp = savedCp(qIdx);
+    setCpForm({
+      status: cp?.status || "PENDING",
+      assignedToId: cp?.assignedTo?.id || "",
+      comment: cp?.comment || "",
+    });
+    setCpStaffSearch(cp?.assignedTo?.name || "");
+    setEditingQ(qIdx);
+  };
+
+  const handleSaveCp = async () => {
+    try {
+      await upsertCheckpoint({
+        projectId,
+        quarterIndex: editingQ,
+        data: { status: cpForm.status, assignedToId: cpForm.assignedToId || null, comment: cpForm.comment || null },
+      }).unwrap();
+      dispatch(addToast({ type: "success", message: "Checkpoint saved." }));
+      setEditingQ(null);
+    } catch (err) {
+      dispatch(addToast({ type: "error", message: err?.data?.message || "Save failed." }));
+    }
+  };
+
+  const CP_STATUS_CFG = {
+    PENDING:     { label: "Pending",     cls: "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300" },
+    IN_PROGRESS: { label: "In Progress", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+    COMPLETED:   { label: "Completed",   cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+    DELAYED:     { label: "Delayed",     cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+  };
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
   const isBusy = creating || updating;
@@ -1152,16 +1199,19 @@ const WarrantyProgressBar = ({ amcRecord, projectId, dispatch }) => {
             {/* Segment list */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {segments.map((seg, i) => {
-                const chipCfg = {
+                const timeChipCfg = {
                   past:     "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400",
                   current:  "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
                   upcoming: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
                 };
-                const chipLabel = { past: "Completed", current: "In Progress", upcoming: "Upcoming" };
+                const timeChipLabel = { past: "Past", current: "Active", upcoming: "Upcoming" };
+                const cp = savedCp(seg.idx);
+                const isEditing = editingQ === seg.idx;
+
                 return (
                   <div
                     key={i}
-                    className={`rounded-xl border p-4 space-y-2 transition-colors ${
+                    className={`rounded-xl border transition-colors ${
                       seg.status === "current"
                         ? "border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10"
                         : seg.status === "past"
@@ -1169,28 +1219,138 @@ const WarrantyProgressBar = ({ amcRecord, projectId, dispatch }) => {
                         : "border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-900/5"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-slate-800 dark:text-white">
-                        Q{i + 1} — Months {i * 3 + 1}–{Math.min((i + 1) * 3, Math.round(totalDays / 30))}
-                      </span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${chipCfg[seg.status]}`}>
-                        {chipLabel[seg.status]}
-                      </span>
+                    {/* Card header */}
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">
+                          Q{i + 1} — Months {i * 3 + 1}–{Math.min((i + 1) * 3, Math.round(totalDays / 30))}
+                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${timeChipCfg[seg.status]}`}>
+                            {timeChipLabel[seg.status]}
+                          </span>
+                          {!isEditing && (
+                            <button
+                              onClick={() => openCpEdit(seg.idx)}
+                              title="Log update for this quarter"
+                              className="p-1 rounded-md hover:bg-black/10 dark:hover:bg-white/10 text-gray-400 dark:text-slate-500 transition"
+                            >
+                              <PencilSimple size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
+                        {fmtDate(seg.segStart)} — {fmtDate(seg.segEnd)}
+                      </p>
+
+                      {/* Active-quarter mini progress */}
+                      {seg.status === "current" && (
+                        <div className="space-y-1">
+                          <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-amber-400 transition-all duration-700"
+                              style={{ width: `${seg.segElapsed * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            {Math.round(seg.segElapsed * 100)}% of this quarter elapsed
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Saved checkpoint display */}
+                      {cp && !isEditing && (
+                        <div className="mt-1 pt-2 border-t border-black/5 dark:border-white/5 space-y-1">
+                          <span className={`inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-full ${CP_STATUS_CFG[cp.status]?.cls}`}>
+                            {CP_STATUS_CFG[cp.status]?.label}
+                          </span>
+                          {cp.assignedTo && (
+                            <p className="text-xs text-gray-500 dark:text-slate-400">
+                              Assigned: <span className="font-medium text-slate-700 dark:text-slate-300">{cp.assignedTo.name}</span>
+                            </p>
+                          )}
+                          {cp.comment && (
+                            <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2">{cp.comment}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">
-                      {fmtDate(seg.segStart)} — {fmtDate(seg.segEnd)}
-                    </p>
-                    {seg.status === "current" && (
-                      <div className="space-y-1">
-                        <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-amber-400 transition-all duration-700"
-                            style={{ width: `${seg.segElapsed * 100}%` }}
+
+                    {/* Inline edit form */}
+                    {isEditing && (
+                      <div className="px-4 pb-4 space-y-3 border-t border-black/5 dark:border-white/5 pt-3">
+                        {/* Status */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Status</label>
+                          <div className="relative">
+                            <select
+                              className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-white appearance-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                              value={cpForm.status}
+                              onChange={(e) => setCpForm((f) => ({ ...f, status: e.target.value }))}
+                            >
+                              <option value="PENDING">Pending</option>
+                              <option value="IN_PROGRESS">In Progress</option>
+                              <option value="COMPLETED">Completed</option>
+                              <option value="DELAYED">Delayed</option>
+                            </select>
+                            <CaretDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+                          </div>
+                        </div>
+
+                        {/* Assign staff */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Assign Staff (optional)</label>
+                          <input
+                            className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder="Search staff by name…"
+                            value={cpStaffSearch}
+                            onChange={(e) => { setCpStaffSearch(e.target.value); setCpForm((f) => ({ ...f, assignedToId: "" })); }}
+                          />
+                          {cpUsersData?.users?.length > 0 && cpStaffSearch && !cpForm.assignedToId && (
+                            <ul className="border border-gray-200 dark:border-slate-700 rounded-lg mt-1 max-h-28 overflow-y-auto bg-white dark:bg-slate-800 text-sm z-10 relative">
+                              {cpUsersData.users.map((u) => (
+                                <li
+                                  key={u.id}
+                                  className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer text-slate-900 dark:text-white"
+                                  onClick={() => { setCpForm((f) => ({ ...f, assignedToId: u.id })); setCpStaffSearch(u.name); }}
+                                >
+                                  {u.name}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+
+                        {/* Comment */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Comment (optional)</label>
+                          <textarea
+                            rows={2}
+                            className="w-full text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder="Any notes for this quarter…"
+                            value={cpForm.comment}
+                            onChange={(e) => setCpForm((f) => ({ ...f, comment: e.target.value }))}
                           />
                         </div>
-                        <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                          {Math.round(seg.segElapsed * 100)}% of this quarter elapsed
-                        </p>
+
+                        {/* Actions */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEditingQ(null)}
+                            className="flex-1 text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSaveCp}
+                            disabled={savingCp}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold hover:opacity-90 disabled:opacity-50 transition"
+                          >
+                            {savingCp ? <CircleNotch size={12} className="animate-spin" /> : <FloppyDisk size={12} />}
+                            {savingCp ? "Saving…" : "Save"}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
