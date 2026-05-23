@@ -38,6 +38,17 @@ function getNextCheckpoint(amc) {
   return { date: cp, quarterIndex: idx, saved: amc.checkpoints?.find((c) => c.quarterIndex === idx) ?? null };
 }
 
+function getMonthCheckpoint(amc, year, month) {
+  const monthStart = new Date(Number(year), Number(month) - 1, 1);
+  const monthEnd   = new Date(Number(year), Number(month), 0);
+  const end = new Date(amc.endDate);
+  let cp = new Date(amc.startDate);
+  let idx = 0;
+  while (cp < monthStart) { cp = addMonths(cp, 3); idx++; }
+  if (cp > monthEnd || cp > end) return null;
+  return { date: cp, quarterIndex: idx, saved: amc.checkpoints?.find((c) => c.quarterIndex === idx) ?? null };
+}
+
 function getQuarterCheckpoint(amc, year, quarter) {
   const quarterStart = new Date(Number(year), (Number(quarter) - 1) * 3, 1);
   const quarterEnd   = new Date(Number(year), (Number(quarter) - 1) * 3 + 3, 0);
@@ -69,8 +80,10 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-function CheckpointCell({ amc, yearFilter, quarterFilter }) {
-  const cpInfo = quarterFilter
+function CheckpointCell({ amc, yearFilter, quarterFilter, monthFilter }) {
+  const cpInfo = monthFilter
+    ? getMonthCheckpoint(amc, yearFilter, monthFilter)
+    : quarterFilter
     ? getQuarterCheckpoint(amc, yearFilter, quarterFilter)
     : getNextCheckpoint(amc);
 
@@ -104,6 +117,7 @@ export default function Maintenance() {
   const [statusFilter, setStatusFilter] = useState("");
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
   const [quarterFilter, setQuarterFilter] = useState(null); // 1-4 or null
+  const [monthFilter, setMonthFilter] = useState(null);     // 1-12 or null
 
   const [debouncedSearch] = useDebounce(search, 300);
 
@@ -114,19 +128,30 @@ export default function Maintenance() {
     { q: 4, label: "Q4", months: "Oct – Dec" },
   ];
 
+  const MONTH_LABELS = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December",
+  ];
+  const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
   const { data, isLoading, isFetching } = useGetAllAmcRecordsQuery({
     page,
     limit: PER_PAGE,
     search: debouncedSearch,
     status: statusFilter,
-    year: quarterFilter ? String(yearFilter) : "",
+    year: (quarterFilter || monthFilter) ? String(yearFilter) : "",
     quarter: quarterFilter ? String(quarterFilter) : "",
+    month: monthFilter ? String(monthFilter) : "",
   });
 
   const records = data?.amcRecords ?? [];
   const meta = data?.meta;
 
-  const checkpointColHeader = quarterFilter ? `Q${quarterFilter} Checkpoint` : "Next Checkpoint";
+  const checkpointColHeader = monthFilter
+    ? `${MONTH_SHORT[monthFilter - 1]} Checkpoint`
+    : quarterFilter
+    ? `Q${quarterFilter} Checkpoint`
+    : "Next Checkpoint";
   const tableHeaders = [
     "Customer", "Phone", "Start Date", "End Date", "Status",
     checkpointColHeader,
@@ -173,11 +198,11 @@ export default function Maintenance() {
           )}
         </div>
 
-        {/* Quarter filter */}
+        {/* Quarter / Month filter */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <CalendarBlankIcon size={15} />
-            <span className="font-medium whitespace-nowrap">Filter by Quarter:</span>
+            <span className="font-medium whitespace-nowrap">Filter by:</span>
           </div>
 
           {/* Year selector */}
@@ -198,7 +223,11 @@ export default function Maintenance() {
               <button
                 key={q}
                 title={months}
-                onClick={() => { setQuarterFilter(quarterFilter === q ? null : q); setPage(1); }}
+                onClick={() => {
+                  setMonthFilter(null);
+                  setQuarterFilter(quarterFilter === q ? null : q);
+                  setPage(1);
+                }}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
                   quarterFilter === q
                     ? "bg-green-600 text-white border-green-600 dark:bg-green-500 dark:border-green-500"
@@ -211,9 +240,28 @@ export default function Maintenance() {
             ))}
           </div>
 
-          {quarterFilter && (
+          <span className="text-xs text-gray-400 dark:text-gray-600 hidden sm:inline">or</span>
+
+          {/* Month dropdown */}
+          <select
+            className="text-sm border border-gray-300 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={monthFilter ?? ""}
+            onChange={(e) => {
+              const val = e.target.value ? Number(e.target.value) : null;
+              setQuarterFilter(null);
+              setMonthFilter(val);
+              setPage(1);
+            }}
+          >
+            <option value="">Month</option>
+            {MONTH_LABELS.map((label, i) => (
+              <option key={i + 1} value={i + 1}>{label}</option>
+            ))}
+          </select>
+
+          {(quarterFilter || monthFilter) && (
             <button
-              onClick={() => { setQuarterFilter(null); setPage(1); }}
+              onClick={() => { setQuarterFilter(null); setMonthFilter(null); setPage(1); }}
               className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 hover:underline font-medium"
             >
               <XIcon size={12} /> Clear
@@ -259,7 +307,7 @@ export default function Maintenance() {
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{fmt(amc.endDate)}</td>
                       <td className="px-4 py-3"><StatusBadge status={amc.status} /></td>
                       <td className="px-4 py-3">
-                        <CheckpointCell amc={amc} yearFilter={yearFilter} quarterFilter={quarterFilter} />
+                        <CheckpointCell amc={amc} yearFilter={yearFilter} quarterFilter={quarterFilter} monthFilter={monthFilter} />
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{amc.supportContact?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-45 truncate">{amc.notes ?? "—"}</td>
@@ -297,9 +345,9 @@ export default function Maintenance() {
                   </div>
                   <div className="pt-0.5">
                     <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
-                      {quarterFilter ? `Q${quarterFilter} Checkpoint` : "Next Checkpoint"}
+                      {monthFilter ? `${MONTH_SHORT[monthFilter - 1]} Checkpoint` : quarterFilter ? `Q${quarterFilter} Checkpoint` : "Next Checkpoint"}
                     </p>
-                    <CheckpointCell amc={amc} yearFilter={yearFilter} quarterFilter={quarterFilter} />
+                    <CheckpointCell amc={amc} yearFilter={yearFilter} quarterFilter={quarterFilter} monthFilter={monthFilter} />
                   </div>
                   {amc.notes && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{amc.notes}</p>
