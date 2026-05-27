@@ -35,7 +35,7 @@ const Spinner = () => (
 const LeadDocuments = () => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "INSTALLATION & MAINTENANCE DEPARTMENT" || dept === "OPERATIONS DEPARTMENT";
+  const isReadOnly = false;
 
   const leadId = useParams().customerId;
   const navigate = useNavigate();
@@ -314,7 +314,7 @@ const LeadDocuments = () => {
                         type="file"
                         className="hidden"
                         onChange={(e) => handleFileSelected(category, e)}
-                        accept={accept === "application/pdf" ? ".pdf,application/pdf" : ".pdf,.jpg,.jpeg,.png,.webp"}
+                        accept={accept === "application/pdf" ? ".pdf,application/pdf" : ".pdf,.jpg,.jpeg,.png,.webp,.csv,text/csv"}
                         aria-label={`Upload ${label}`}
                       />
 

@@ -90,6 +90,7 @@ const TASK_TO_CATEGORY = {
 // Restricts accepted file types per task (undefined = all allowed types)
 const TASK_FILE_ACCEPT = {
   "Material Photos": "image/jpeg,image/png",
+  "CSV File": ".csv,text/csv,application/csv",
 };
 
 // ─── Shared field style ───────────────────────────────────────────────────────
@@ -300,7 +301,6 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
   useEffect(() => { setOptimisticStatus(task.status); }, [task.status]);
 
   const isCompleted = optimisticStatus === "COMPLETED";
-  const isStageLocked = stageStatus === "NOT_STARTED";
   const activeConfig = STATUS_CONFIG[optimisticStatus] || STATUS_CONFIG.NOT_STARTED;
 
   const handleStatusChange = async (newStatus) => {
@@ -362,7 +362,7 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
             <select
               value={optimisticStatus}
               onChange={e => handleStatusChange(e.target.value)}
-              disabled={isStageLocked || isUpdating}
+              disabled={isUpdating}
               className={`appearance-none pl-3 pr-7 py-1.5 text-xs font-semibold rounded-full ring-1 ring-inset border-0 outline-none cursor-pointer disabled:opacity-50 ${activeConfig.theme}`}
             >
               {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
