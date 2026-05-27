@@ -394,7 +394,7 @@ const EMPTY_NOTES = () => [{ key: "", value: "" }, { key: "", value: "" }];
 const SitePhotoModal = ({ visit, onClose }) => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "OPERATIONS DEPARTMENT";
+  const isReadOnly = false;
   const dispatch = useDispatch();
 
   const [activeSection, setActiveSection] = useState("pre");

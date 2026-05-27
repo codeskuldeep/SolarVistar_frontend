@@ -317,7 +317,7 @@ const QuotationsDrawer = ({ leadId, title, subtitle, onClose }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useSelector((state) => state.auth);
   const dept = (currentUser?.department?.name || currentUser?.department || "").toUpperCase();
-  const isReadOnly = dept === "OPERATIONS DEPARTMENT";
+  const isReadOnly = false;
 
   const [showForm, setShowForm] = useState(false);
 
