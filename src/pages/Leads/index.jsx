@@ -5,6 +5,8 @@ import { useDebounce } from "use-debounce";
 import {
   useGetLeadsQuery,
   useCreateLeadMutation,
+  useUpdateLeadMutation,
+  useDeleteLeadMutation,
   useUpdateLeadStatusMutation,
   useAddFollowUpMutation,
 } from "../../context/api/leadsApi";
@@ -16,6 +18,8 @@ import {
   PhoneIcon,
   EnvelopeSimpleIcon,
   NotePencilIcon,
+  PencilSimpleIcon,
+  TrashIcon,
   CalendarPlusIcon,
   WhatsappLogoIcon,
   UserIcon,
@@ -96,6 +100,15 @@ const Leads = () => {
     notes: "",
     assignedToId: "",
   });
+  const [editData, setEditData] = useState({
+    customerName: "",
+    phoneNumber: "",
+    email: "",
+    address: "",
+    requirements: "",
+    notes: "",
+    assignedToId: "",
+  });
   const [updateData, setUpdateData] = useState({
     status: "NEW",
     assignedToId: "",
@@ -125,6 +138,8 @@ const Leads = () => {
   );
 
   const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
+  const [updateLead, { isLoading: isEditing }] = useUpdateLeadMutation();
+  const [deleteLead, { isLoading: isDeleting }] = useDeleteLeadMutation();
   const [updateLeadStatus, { isLoading: isUpdating }] =
     useUpdateLeadStatusMutation();
   const [addFollowUp, { isLoading: isFollowingUp }] = useAddFollowUpMutation();
@@ -232,6 +247,27 @@ const Leads = () => {
           type: "error",
         }),
       );
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    const result = await updateLead({ id: selectedLead.id, ...editData });
+    if (!result.error) {
+      handleCloseModal();
+      dispatch(addToast({ message: "Lead updated successfully", type: "success" }));
+    } else {
+      dispatch(addToast({ message: result.error?.data?.message || "Failed to update lead", type: "error" }));
+    }
+  };
+
+  const handleDelete = async (lead) => {
+    if (!window.confirm(`Delete lead "${lead.customerName}"? This cannot be undone.`)) return;
+    const result = await deleteLead(lead.id);
+    if (!result.error) {
+      dispatch(addToast({ message: "Lead deleted", type: "success" }));
+    } else {
+      dispatch(addToast({ message: result.error?.data?.message || "Failed to delete lead", type: "error" }));
     }
   };
 
@@ -443,6 +479,25 @@ const Leads = () => {
                           <ReceiptIcon size={17} />
                         </ActionButton>
                         <ActionButton
+                          title="Edit Lead"
+                          hoverColor="hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setEditData({
+                              customerName: lead.customerName || "",
+                              phoneNumber: lead.phoneNumber || "",
+                              email: lead.email || "",
+                              address: lead.address || "",
+                              requirements: lead.requirements || "",
+                              notes: lead.notes || "",
+                              assignedToId: lead.assignedToId || "",
+                            });
+                            setActiveModal("EDIT");
+                          }}
+                        >
+                          <PencilSimpleIcon size={17} />
+                        </ActionButton>
+                        <ActionButton
                           title="Update Status"
                           hoverColor="hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
                           onClick={() => {
@@ -465,6 +520,13 @@ const Leads = () => {
                           }}
                         >
                           <CalendarPlusIcon size={17} />
+                        </ActionButton>
+                        <ActionButton
+                          title="Delete Lead"
+                          hoverColor="hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          onClick={() => handleDelete(lead)}
+                        >
+                          <TrashIcon size={17} />
                         </ActionButton>
                       </>
                     )}
@@ -549,6 +611,24 @@ const Leads = () => {
                       <button
                         onClick={() => {
                           setSelectedLead(lead);
+                          setEditData({
+                            customerName: lead.customerName || "",
+                            phoneNumber: lead.phoneNumber || "",
+                            email: lead.email || "",
+                            address: lead.address || "",
+                            requirements: lead.requirements || "",
+                            notes: lead.notes || "",
+                            assignedToId: lead.assignedToId || "",
+                          });
+                          setActiveModal("EDIT");
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/30 transition-colors"
+                      >
+                        <PencilSimpleIcon size={13} /> Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedLead(lead);
                           setUpdateData({
                             status: lead.status || "NEW",
                             assignedToId: "",
@@ -557,7 +637,7 @@ const Leads = () => {
                         }}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 dark:text-green-300 dark:bg-green-900/30 transition-colors"
                       >
-                        <NotePencilIcon size={13} /> Edit
+                        <NotePencilIcon size={13} /> Status
                       </button>
                       <button
                         onClick={() => {
@@ -567,6 +647,12 @@ const Leads = () => {
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 transition-colors whitespace-nowrap"
                       >
                         <CalendarPlusIcon size={13} /> Follow-up
+                      </button>
+                      <button
+                        onClick={() => handleDelete(lead)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/30 transition-colors"
+                      >
+                        <TrashIcon size={13} /> Delete
                       </button>
                     </>
                   )}
@@ -597,6 +683,7 @@ const Leads = () => {
             <div className="px-5 py-4 border-b border-gray-100 dark:border-dark-border flex justify-between items-center flex-shrink-0">
               <h3 className="text-base font-bold text-gray-900 dark:text-white">
                 {activeModal === "CREATE" && "Add New Lead"}
+                {activeModal === "EDIT" && `Edit: ${selectedLead?.customerName}`}
                 {activeModal === "UPDATE_STATUS" &&
                   `Update: ${selectedLead?.customerName}`}
                 {activeModal === "ADD_FOLLOWUP" && "Log Follow-up"}
@@ -718,6 +805,90 @@ const Leads = () => {
                   isLoading={isCreating}
                   submitLabel="Save Lead"
                   submitColor="bg-green-600 hover:bg-green-700"
+                />
+              </form>
+            )}
+
+            {/* ── EDIT LEAD ── */}
+            {activeModal === "EDIT" && (
+              <form onSubmit={handleEditSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Customer Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editData.customerName}
+                      onChange={(e) => setEditData({ ...editData, customerName: e.target.value })}
+                      placeholder="Full name"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Phone Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={editData.phoneNumber}
+                      onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
+                      placeholder="+91 98765 43210"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Email</label>
+                  <input
+                    type="email"
+                    value={editData.email}
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                    placeholder="optional@email.com"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Address / Location</label>
+                  <input
+                    type="text"
+                    value={editData.address}
+                    onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                    placeholder="City, area…"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Requirements</label>
+                  <input
+                    type="text"
+                    value={editData.requirements}
+                    onChange={(e) => setEditData({ ...editData, requirements: e.target.value })}
+                    placeholder="e.g. 5kW rooftop"
+                    className={inputCls}
+                  />
+                </div>
+                <AssignSelect
+                  isAdmin={canAssign}
+                  value={editData.assignedToId}
+                  onChange={(v) => setEditData({ ...editData, assignedToId: v })}
+                  staffUsers={staffUsers}
+                  onSearch={setStaffSearch}
+                  isLoading={staffFetching}
+                />
+                <div>
+                  <label className={labelCls}>Notes</label>
+                  <textarea
+                    rows="3"
+                    value={editData.notes}
+                    onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                    placeholder="Any additional context…"
+                    className={inputCls}
+                  />
+                </div>
+                <ModalFooter
+                  onCancel={handleCloseModal}
+                  isLoading={isEditing}
+                  submitLabel="Save Changes"
+                  submitColor="bg-indigo-600 hover:bg-indigo-700"
                 />
               </form>
             )}
