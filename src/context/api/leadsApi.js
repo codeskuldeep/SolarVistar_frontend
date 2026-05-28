@@ -57,6 +57,29 @@ export const leadsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // PUT /leads/:id — update lead info
+    updateLead: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/leads/${id}`,
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response) => response.data.lead,
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Lead", id },
+        { type: "Lead", id: "LIST" },
+      ],
+    }),
+
+    // DELETE /leads/:id
+    deleteLead: builder.mutation({
+      query: (id) => ({
+        url: `/leads/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "Lead", id: "LIST" }],
+    }),
+
     // POST /leads/:id/followups
     addFollowUp: builder.mutation({
       query: ({ id, followUpData }) => ({
@@ -76,6 +99,8 @@ export const {
   useGetLeadsQuery,
   useGetLeadByIdQuery,
   useCreateLeadMutation,
+  useUpdateLeadMutation,
+  useDeleteLeadMutation,
   useUpdateLeadStatusMutation,
   useAddFollowUpMutation,
 } = leadsApi;
