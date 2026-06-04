@@ -27,6 +27,7 @@ import {
   Coins,
   X,
   PencilSimple,
+  Warning,
 } from "@phosphor-icons/react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ const TASKS_WITH_DOCS = [
   "Site Feasibility Check", "Quotation Upload", "Model Agreement", "Loan Process",
   "Joint Inspection", "Work Completion", "Net Meter", "CMC", "CSV File", "DCR Certificate",
   "Urjas Portal Upload", "MPEB Sanction", "PM Surya Ghar Portal Upload", "Sanction Receipt",
+  "Kit Ready", "Installation",
   "Panels/Inverter Photo", "Material Photos", "Final Customer Photo with Plant"
 ];
 
@@ -82,6 +84,8 @@ const TASK_TO_CATEGORY = {
   "MPEB Sanction": "MPEB_SANCTION",
   "PM Surya Ghar Portal Upload": "PM_SURYA_GHAR_DCR",
   "Sanction Receipt": "PM_SURYA_GHAR_SANCTION_LETTER",
+  "Kit Ready": "KIT_READY_PHOTO",
+  "Installation": "INSTALLATION_PHOTO",
   "Panels/Inverter Photo": "KIT_READY_PHOTO",
   "Material Photos": "MATERIAL_PHOTOS",
   "Final Customer Photo with Plant": "FINAL_CUSTOMER_PHOTO_WITH_PLANT",
@@ -89,6 +93,8 @@ const TASK_TO_CATEGORY = {
 
 // Restricts accepted file types per task (undefined = all allowed types)
 const TASK_FILE_ACCEPT = {
+  "Kit Ready": "image/jpeg,image/png",
+  "Installation": "image/jpeg,image/png",
   "Material Photos": "image/jpeg,image/png",
   "CSV File": ".csv,text/csv,application/csv",
 };
@@ -479,6 +485,26 @@ const TaskRow = ({ task, projectId, stageStatus, dispatch, showGovtForm, showSub
               )}
             </div>
           )}
+
+          {/* Completion prerequisite hint */}
+          {optimisticStatus !== "COMPLETED" && (() => {
+            const missing = [];
+            if (showGovtForm && !task.govtApprovalDetails?.referenceNumber)
+              missing.push("a reference/application number in the portal details");
+            if (task.name === "Sanction Receipt" && !task.govtApprovalDetails?.sanctionDate)
+              missing.push("a sanction date in the portal details");
+            if (task.name === "Subsidy Redeemed" && !subsidyDetails?.redeemedAmount)
+              missing.push("the redeemed amount in the subsidy form");
+            if (task.name === "Subsidy Disbursed" && (!subsidyDetails?.transactionRef || !subsidyDetails?.disbursedAmount))
+              missing.push("the transaction reference and disbursed amount in the subsidy form");
+            if (missing.length === 0) return null;
+            return (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-700 dark:text-amber-400">
+                <Warning size={14} weight="fill" className="shrink-0 mt-0.5" />
+                <span>Required before completing: {missing.join(", ")}.</span>
+              </div>
+            );
+          })()}
 
           <div className="flex justify-end pt-2">
             <button
