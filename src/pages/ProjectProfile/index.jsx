@@ -716,9 +716,11 @@ const DocumentsMatrix = ({ projectId }) => {
         <h3 className="text-base font-semibold tracking-tight">Required Documents Matrix</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {Object.entries(byStage).map(([stageName, docs]) => (
-          <div key={stageName}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        {Object.entries(byStage).map(([stageName, docs], index, arr) => {
+          const isLastOdd = index === arr.length - 1 && arr.length % 2 !== 0;
+          return (
+          <div key={stageName} className={isLastOdd ? "md:col-span-2" : ""}>
             <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">{STAGE_NAMES[stageName]}</h4>
             <div className="space-y-2">
               {docs.map((doc, idx) => (
@@ -762,7 +764,8 @@ const DocumentsMatrix = ({ projectId }) => {
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
