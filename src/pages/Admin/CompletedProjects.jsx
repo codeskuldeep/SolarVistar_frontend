@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGetProjectsQuery } from "../../context/api/projectsApi";
 import { 
@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 
 export default function CompletedProjects() {
-  const { data, isLoading, isError } = useGetProjectsQuery({ status: "COMPLETED" });
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError } = useGetProjectsQuery({ status: "COMPLETED", page });
 
   if (isLoading) return <CompletedSkeleton />;
   
@@ -48,7 +49,7 @@ export default function CompletedProjects() {
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-green/10 text-brand-green-dark dark:text-brand-green text-sm font-medium rounded-md border border-brand-green/20">
             <ShieldCheck className="w-4 h-4" />
-            {meta?.totalItems || projects.length} Commissioned
+            {meta?.totalItems ?? projects.length} Commissioned
           </span>
         </div>
       </header>
@@ -76,14 +77,19 @@ export default function CompletedProjects() {
                 Showing <span className="font-medium text-gray-900 dark:text-gray-100">{(meta.currentPage - 1) * meta.itemsPerPage + 1}</span> to <span className="font-medium text-gray-900 dark:text-gray-100">{Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}</span> of <span className="font-medium text-gray-900 dark:text-gray-100">{meta.totalItems}</span> results
               </p>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   disabled={meta.currentPage === 1}
+                  onClick={() => setPage(p => p - 1)}
                   className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button 
+                <span className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {meta.currentPage} / {meta.totalPages}
+                </span>
+                <button
                   disabled={meta.currentPage === meta.totalPages}
+                  onClick={() => setPage(p => p + 1)}
                   className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
