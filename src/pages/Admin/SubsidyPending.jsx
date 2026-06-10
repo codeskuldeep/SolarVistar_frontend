@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGetProjectsQuery } from "../../context/api/projectsApi";
 import { 
@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 
 export default function SubsidyPending() {
-  const { data, isLoading, isError } = useGetProjectsQuery({ currentStage: "SUBSIDY" });
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError } = useGetProjectsQuery({ currentStage: "SUBSIDY", page });
 
   if (isLoading) return <SubsidySkeleton />;
   
@@ -47,7 +48,7 @@ export default function SubsidyPending() {
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-blue/10 text-brand-blue-dark dark:text-blue-400 text-sm font-medium rounded-md border border-brand-blue/20">
             <Landmark className="w-3.5 h-3.5" />
-            {meta?.totalItems || projects.length} Applications
+            {meta?.totalItems ?? projects.length} Applications
           </span>
         </div>
       </header>
@@ -75,14 +76,19 @@ export default function SubsidyPending() {
                 Showing <span className="font-medium text-gray-900 dark:text-gray-100">{(meta.currentPage - 1) * meta.itemsPerPage + 1}</span> to <span className="font-medium text-gray-900 dark:text-gray-100">{Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}</span> of <span className="font-medium text-gray-900 dark:text-gray-100">{meta.totalItems}</span> results
               </p>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   disabled={meta.currentPage === 1}
+                  onClick={() => setPage(p => p - 1)}
                   className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button 
+                <span className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {meta.currentPage} / {meta.totalPages}
+                </span>
+                <button
                   disabled={meta.currentPage === meta.totalPages}
+                  onClick={() => setPage(p => p + 1)}
                   className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
