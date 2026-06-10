@@ -14,7 +14,7 @@ import {
 
 export default function InstallationPending() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError } = useGetProjectsQuery({ currentStage: "INSTALLATION", page });
+  const { data, isLoading, isFetching, isError } = useGetProjectsQuery({ currentStage: "INSTALLATION", status: "IN_PROGRESS", page });
 
   if (isLoading) return <InstallationSkeleton />;
   
@@ -63,7 +63,7 @@ export default function InstallationPending() {
       ) : (
         <>
           {/* Projects Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 transition-opacity duration-200 ${isFetching ? "opacity-50 pointer-events-none" : ""}`}>
             {projects.map((project) => (
               <InstallationCard key={project.id} project={project} />
             ))}
@@ -77,19 +77,20 @@ export default function InstallationPending() {
               </p>
               <div className="flex items-center gap-2">
                 <button
-                  disabled={meta.currentPage === 1}
+                  disabled={meta.currentPage === 1 || isFetching}
                   onClick={() => setPage(p => p - 1)}
-                  className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 min-w-20 justify-center">
+                  {isFetching && <span className="w-3.5 h-3.5 border-2 border-gray-200 dark:border-gray-700 border-t-brand-yellow rounded-full animate-spin inline-block" />}
                   {meta.currentPage} / {meta.totalPages}
                 </span>
                 <button
-                  disabled={meta.currentPage === meta.totalPages}
+                  disabled={meta.currentPage === meta.totalPages || isFetching}
                   onClick={() => setPage(p => p + 1)}
-                  className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 border border-gray-200 dark:border-dark-border rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -173,7 +174,7 @@ function InstallationCard({ project }) {
         <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">
           ID: {project.id.split('-')[0]}
         </p>
-        <button className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-blue dark:text-blue-400 hover:text-brand-blue-dark transition-colors group-hover:underline decoration-1 underline-offset-2">
+        <button className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-blue dark:text-blue-400 hover:text-brand-blue-dark transition-colors group-hover:underline decoration-1 underline-offset-2 cursor-pointer">
           Update Status
           <ArrowRight className="w-4 h-4" />
         </button>
