@@ -142,7 +142,7 @@ export default function AdminDashboard() {
       {/* KPI Cards Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
         <KpiCard title="Total Leads" value={totalLeads} subtitle="All time leads generated" icon={UsersThreeIcon} colorScheme="primary" isLoading={isStatsLoading} onClick={() => navigate('/leads')} />
-        <KpiCard title="Active Customers" value={activeCustomers} subtitle="Projects currently in progress" icon={ProjectorScreenChartIcon} colorScheme="secondary" isLoading={isStatsLoading} onClick={() => navigate('/customers')} />
+        <KpiCard title="Active Customers" value={activeCustomers} subtitle="All converted leads" icon={ProjectorScreenChartIcon} colorScheme="secondary" isLoading={isStatsLoading} onClick={() => navigate('/customers')} />
         <KpiCard title="Projects in Operations" value={projectsInOps} subtitle="Docs, Tech/Fin, File Prep stages" icon={WrenchIcon} colorScheme="tertiary" isLoading={isStatsLoading} onClick={() => navigate('/admin/projects-in-ops')} />
         <KpiCard title="Installation Pending" value={installationPending} subtitle="Projects ready for installation" icon={SunHorizonIcon} colorScheme="quaternary" isLoading={isStatsLoading} onClick={() => navigate('/admin/installation-pending')} />
         <KpiCard title="Subsidy Pending" value={subsidyPending} subtitle="Projects awaiting subsidy disbursement" icon={BankIcon} colorScheme="purple" isLoading={isStatsLoading} onClick={() => navigate('/admin/subsidy-pending')} />
